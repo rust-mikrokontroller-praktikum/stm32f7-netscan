@@ -13,6 +13,9 @@ extern crate cortex_m_rt as rt;
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::fmt;
+use core::fmt::Write;
+
 use alloc_cortex_m::CortexMHeap;
 use core::alloc::Layout as AllocLayout;
 use core::panic::PanicInfo;
@@ -98,7 +101,7 @@ fn main() -> ! {
     unsafe { ALLOCATOR.init(rt::heap_start() as usize, HEAP_SIZE) }
 
     lcd.set_background_color(Color::from_hex(0x0000FF));
-    let layer_1 = lcd.layer_1().unwrap();
+    let mut layer_1 = lcd.layer_1().unwrap();
     let mut layer_2 = lcd.layer_2().unwrap();
 
     layer_2.clear();
@@ -106,7 +109,22 @@ fn main() -> ! {
     // Make `println` print to the LCD
     lcd::init_stdout(layer_2);
 
-    println!("Hello World");
+    //println!("Hello World");
+
+    layer_1.print_point_color_at(0,0, Color::from_hex(0xFFFFFF));
+
+    let mut test = ButtonTextWriter{
+            layer: &mut layer_1,
+            x_pos: 50,
+            y_pos: 50,
+        };
+    test.write_str("Test");
+
+    ButtonTextWriter{
+        layer: &mut layer_1,
+        x_pos: 100,
+        y_pos: 100,
+    }.write_str("Test");
 
     let mut i2c_3 = init::init_i2c_3(peripherals.I2C3, &mut rcc);
     i2c_3.test_1();
@@ -520,4 +538,69 @@ fn panic(info: &PanicInfo) -> ! {
     asm::bkpt();
 
     loop {}
+}
+
+
+
+
+
+/// The height of the display in pixels.
+pub const HEIGHT: usize = 272;
+/// The width of the display in pixels.
+pub const WIDTH: usize = 480;
+
+pub struct ButtonTextWriter<'a, T: Framebuffer + 'a> {
+    layer: &'a mut Layer<T>,
+    x_pos: usize,
+    y_pos: usize,
+}
+
+impl<'a, T: Framebuffer> ButtonTextWriter<'a, T> {
+    fn newline(&mut self) {
+        self.y_pos += 8;
+        self.x_pos = 0;
+        if self.y_pos >= HEIGHT {
+            self.y_pos = 0;
+            self.layer.clear();
+        }
+    }
+}
+
+impl<'a, T: Framebuffer> fmt::Write for ButtonTextWriter<'a, T> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        use font8x8::{self, UnicodeFonts};
+
+        for c in s.chars() {
+            if c == '\n' {
+                self.newline();
+                continue;
+            }
+            match c {
+                ' '..='~' => {
+                    let rendered = font8x8::BASIC_FONTS
+                        .get(c)
+                        .expect("character not found in basic font");
+                    for (y, byte) in rendered.iter().enumerate() {
+                        for (x, bit) in (0..8).enumerate() {
+                            let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
+                            let color = Color {
+                                red: 255,
+                                green: 255,
+                                blue: 255,
+                                alpha,
+                            };
+                            self.layer
+                                .print_point_color_at(self.x_pos + x, self.y_pos + y, color);
+                        }
+                    }
+                }
+                _ => panic!("unprintable character"),
+            }
+            self.x_pos += 8;
+            if self.x_pos >= WIDTH {
+                self.newline();
+            }
+        }
+        Ok(())
+    }
 }

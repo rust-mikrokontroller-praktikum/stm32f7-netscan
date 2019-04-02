@@ -7,6 +7,8 @@
 #![no_std]
 #![no_main]
 
+mod network;
+
 #[macro_use]
 extern crate alloc;
 extern crate cortex_m_rt as rt;
@@ -370,6 +372,8 @@ where
 
         let idle_stream = self.idle_stream;
         pin_mut!(idle_stream);
+
+        network::arp::get_neighbors_v4(iface.ethernet_addr());
 
         let mut sockets = SocketSet::new(Vec::new());
 

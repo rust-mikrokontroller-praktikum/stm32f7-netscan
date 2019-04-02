@@ -12,7 +12,7 @@ use stm32f7::stm32f7x6::{CorePeripherals, Peripherals};
 use stm32f7_discovery::{
     gpio::{GpioPort, InputPin, OutputPin},
     init,
-    lcd::{self, AudioWriter, Color, Framebuffer, Layer, stdout},
+    lcd::{self, Color, Framebuffer, Layer},
     system_clock::{self, Hz},
     print, println,
 };
@@ -69,8 +69,7 @@ fn main() -> ! {
     layer_2.clear();
 
     // Make `println` print to the LCD
-    // lcd::init_stdout(layer_2);
-    stdout::init(layer_2);
+    lcd::init_stdout(layer_2);
 
     println!("Hello World");
 

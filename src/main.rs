@@ -304,7 +304,7 @@ where
             layer_mutex,
         } = self;
         pin_mut!(touch_int_stream);
-        await!(layer_mutex.with(|l| l.clear()));
+        //await!(layer_mutex.with(|l| l.clear()));
         loop {
             await!(touch_int_stream.next()).expect("touch channel closed");
             let touches = await!(i2c_3_mutex.with(|i2c_3| touch::touches(i2c_3))).unwrap();

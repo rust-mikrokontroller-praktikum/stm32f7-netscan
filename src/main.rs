@@ -70,7 +70,7 @@ fn main() -> ! {
     // Make `println` print to the LCD
     lcd::init_stdout(layer_2);
 
-    println!("Hello World");
+    // println!("Hello World");
 
     // Initialize the allocator BEFORE you use it
     unsafe { ALLOCATOR.init(rt::heap_start() as usize, HEAP_SIZE) }

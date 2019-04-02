@@ -12,8 +12,9 @@ use stm32f7::stm32f7x6::{CorePeripherals, Peripherals};
 use stm32f7_discovery::{
     gpio::{GpioPort, InputPin, OutputPin},
     init,
-    lcd::{self, AudioWriter, Color, Framebuffer, Layer},
+    lcd::{self, AudioWriter, Color, Framebuffer, Layer, stdout},
     system_clock::{self, Hz},
+    print, println,
 };
 
 #[global_allocator]
@@ -68,9 +69,10 @@ fn main() -> ! {
     layer_2.clear();
 
     // Make `println` print to the LCD
-    lcd::init_stdout(layer_2);
+    // lcd::init_stdout(layer_2);
+    stdout::init(layer_2);
 
-    // println!("Hello World");
+    println!("Hello World");
 
     // Initialize the allocator BEFORE you use it
     unsafe { ALLOCATOR.init(rt::heap_start() as usize, HEAP_SIZE) }

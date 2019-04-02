@@ -111,20 +111,16 @@ fn main() -> ! {
 
     //println!("Hello World");
 
-    layer_1.print_point_color_at(0,0, Color::from_hex(0xFFFFFF));
+    //layer_1.print_point_color_at(0,0, Color::from_hex(0xFFFFFF));
 
-    let mut test = ButtonTextWriter{
-            layer: &mut layer_1,
-            x_pos: 50,
-            y_pos: 50,
-        };
-    test.write_str("Test");
-
-    ButtonTextWriter{
+    ButtonText{
         layer: &mut layer_1,
         x_pos: 100,
         y_pos: 100,
-    }.write_str("Test");
+        x_size: 50,
+        y_size: 50,
+        text: "Test"
+    }.draw();
 
     let mut i2c_3 = init::init_i2c_3(peripherals.I2C3, &mut rcc);
     i2c_3.test_1();
@@ -544,37 +540,35 @@ fn panic(info: &PanicInfo) -> ! {
 
 
 
-/// The height of the display in pixels.
-pub const HEIGHT: usize = 272;
-/// The width of the display in pixels.
-pub const WIDTH: usize = 480;
 
-pub struct ButtonTextWriter<'a, T: Framebuffer + 'a> {
+
+pub struct ButtonText<'a, T: Framebuffer + 'a> {
     layer: &'a mut Layer<T>,
     x_pos: usize,
     y_pos: usize,
+    x_size: usize,
+    y_size: usize,
+    text: &'a str
 }
 
-impl<'a, T: Framebuffer> ButtonTextWriter<'a, T> {
-    fn newline(&mut self) {
-        self.y_pos += 8;
-        self.x_pos = 0;
-        if self.y_pos >= HEIGHT {
-            self.y_pos = 0;
-            self.layer.clear();
-        }
-    }
-}
-
-impl<'a, T: Framebuffer> fmt::Write for ButtonTextWriter<'a, T> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
+impl<'a, T: Framebuffer> ButtonText<'a, T> {
+    fn draw(&mut self) {
         use font8x8::{self, UnicodeFonts};
 
-        for c in s.chars() {
-            if c == '\n' {
-                self.newline();
-                continue;
+        for x in self.x_pos..self.x_pos+self.x_size {
+            for y in self.y_pos..self.y_pos+self.y_size {
+                let color = Color {
+                                red: 0,
+                                green: 255,
+                                blue: 0,
+                                alpha: 255,
+                            };
+                self.layer.print_point_color_at(x, y, color);
             }
+            
+        }
+
+        for c in self.text.chars() {
             match c {
                 ' '..='~' => {
                     let rendered = font8x8::BASIC_FONTS
@@ -589,18 +583,15 @@ impl<'a, T: Framebuffer> fmt::Write for ButtonTextWriter<'a, T> {
                                 blue: 255,
                                 alpha,
                             };
-                            self.layer
-                                .print_point_color_at(self.x_pos + x, self.y_pos + y, color);
+                            if alpha != 0{
+                                self.layer.print_point_color_at(self.x_pos + x, self.y_pos + y, color);
+                            }
                         }
                     }
                 }
                 _ => panic!("unprintable character"),
             }
             self.x_pos += 8;
-            if self.x_pos >= WIDTH {
-                self.newline();
-            }
         }
-        Ok(())
     }
 }

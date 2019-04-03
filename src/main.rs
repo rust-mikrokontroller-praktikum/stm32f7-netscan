@@ -16,7 +16,8 @@ extern crate stm32f7_discovery;
 extern crate smoltcp;
 
 
-// use alloc::boxed::Box;
+use stm32f7_discovery::lcd::FramebufferArgb8888;
+use alloc::boxed::Box;
 // use pin_utils::pin_mut;
 use alloc::vec::Vec;
 use alloc_cortex_m::CortexMHeap;
@@ -148,28 +149,46 @@ fn main() -> ! {
         println!("ButtonTest2");
     }
 
-    let mut draw_items = Vec::new();
+    let mut draw_items = Vec::<Box<UiElement<FramebufferArgb8888>>>::new();
 
     draw_items.push(
-        ButtonText{
-            x_pos: 100,
-            y_pos: 100,
-            x_size: 50,
-            y_size: 50,
-            text: "Test",
-            touch: test_1
-        }
+        Box::new(
+            ButtonText{
+                x_pos: 100,
+                y_pos: 100,
+                x_size: 50,
+                y_size: 50,
+                text: "Test",
+                touch: test_1
+            }
+        )
     );
 
     draw_items.push(
-        ButtonText{
-            x_pos: 200,
-            y_pos: 200,
-            x_size: 50,
-            y_size: 50,
-            text: "Test",
-            touch: test_2
-        }
+        Box::new(
+            ButtonText{
+                x_pos: 200,
+                y_pos: 200,
+                x_size: 50,
+                y_size: 50,
+                text: "Test",
+                touch: test_2
+            }
+        )
+    );
+
+    draw_items.push(
+        Box::new(
+            ScrollableText{
+                x_pos: 50,
+                y_pos: 50,
+                x_size: 100,
+                y_size: 100,
+                lines: 2,
+                text: "Test\nTest2\nTest3",
+                text_line: 0,
+            }
+        )
     );
 
     for item in &mut draw_items {
@@ -265,13 +284,13 @@ fn main() -> ! {
                 let touch_y = touch.y as usize;
 
                 for item in &mut draw_items {
-                    if touch_x >= item.x_pos
-                        && touch_x <= (item.x_pos + item.x_size)
-                        && touch_y >= item.y_pos
-                        && touch_y <= (item.y_pos + item.y_size)
+                    if touch_x >= item.get_x_pos()
+                        && touch_x <= (item.get_x_pos() + item.get_x_size())
+                        && touch_y >= item.get_y_pos()
+                        && touch_y <= (item.get_y_pos() + item.get_y_size())
                     {
                         //println!("Touched Button");
-                        (item.touch)();
+                        item.run_touch_func();
                     }
                     
                 }
@@ -415,9 +434,9 @@ fn exti0(_state: &mut Option<HStdout>) {
 fn SysTick() {
     system_clock::tick();
     // print a `.` every 500ms
-    if system_clock::ticks() % 50 == 0 && lcd::stdout::is_initialized() {
-        print!(".");
-    }
+    // if system_clock::ticks() % 50 == 0 && lcd::stdout::is_initialized() {
+    //     print!(".");
+    // }
 }
 
 #[exception]
@@ -453,6 +472,13 @@ fn panic(info: &PanicInfo) -> ! {
 
 
 trait UiElement<T: Framebuffer> {
+    fn get_x_pos(&mut self) -> usize;
+    fn get_y_pos(&mut self) -> usize;
+    fn get_x_size(&mut self) -> usize;
+    fn get_y_size(&mut self) -> usize;
+
+    fn run_touch_func(&mut self);
+
     fn draw(&mut self, layer: &mut Layer<T>);
 }
 
@@ -478,6 +504,26 @@ pub struct ButtonText<'a> {
 // }
 
 impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
+    fn get_x_pos(&mut self) -> usize{
+        self.x_pos
+    }
+    
+    fn get_y_pos(&mut self) -> usize{
+        self.y_pos
+    }
+    
+    fn get_x_size(&mut self) -> usize{
+        self.x_size
+    }
+    
+    fn get_y_size(&mut self) -> usize{
+        self.y_size
+    }
+    
+    fn run_touch_func(&mut self){
+        (self.touch)()
+    }
+    
     fn draw(&mut self, layer: &mut Layer<T>) {
         use font8x8::{self, UnicodeFonts};
 
@@ -525,5 +571,97 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
             }
             temp_x_pos += 8;
         }
+    }
+}
+
+pub struct ScrollableText<'a> {
+    x_pos: usize,
+    y_pos: usize,
+    x_size: usize,
+    y_size: usize,
+    lines: usize,
+    text: &'a str,
+    text_line: usize,
+}
+
+impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
+    fn get_x_pos(&mut self) -> usize{
+        self.x_pos
+    }
+    
+    fn get_y_pos(&mut self) -> usize{
+        self.y_pos
+    }
+    
+    fn get_x_size(&mut self) -> usize{
+        self.x_size
+    }
+    
+    fn get_y_size(&mut self) -> usize{
+        self.y_size
+    }
+    
+    fn run_touch_func(&mut self){
+    }
+
+    fn draw(&mut self, layer: &mut Layer<T>) {
+        use font8x8::{self, UnicodeFonts};
+
+        for x in self.x_pos..self.x_pos+self.x_size {
+            for y in self.y_pos..self.y_pos+self.y_size {
+                let color = Color {
+                                red: 0,
+                                green: 255,
+                                blue: 0,
+                                alpha: 255,
+                            };
+                layer.print_point_color_at(x, y, color);
+            }
+            
+        }
+
+        let mut temp_x_pos = self.x_pos;
+        let mut count = 0;
+        let mut count_lines = 0;
+
+        let lines = self.text.split("\n");
+
+        for line in lines{
+            if count < self.text_line{
+                continue;
+            } else if count_lines >= self.lines{
+                break;
+            } else {
+                for c in line.chars() {
+                    match c {
+                        ' '..='~' => {
+                            let rendered = font8x8::BASIC_FONTS
+                                .get(c)
+                                .expect("character not found in basic font");
+                            for (y, byte) in rendered.iter().enumerate() {
+                                for (x, bit) in (0..8).enumerate() {
+                                    let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
+                                    let color = Color {
+                                        red: 255,
+                                        green: 255,
+                                        blue: 255,
+                                        alpha,
+                                    };
+                                    if alpha != 0{
+                                        layer.print_point_color_at(temp_x_pos + x, self.y_pos + y, color);
+                                    }
+                                }
+                            }
+                        }
+                        _ => panic!("unprintable character"),
+                    }
+                    temp_x_pos += 8;
+                }
+                count_lines += 1;
+            }
+            count += 1;
+        }
+
+        
     }
 }

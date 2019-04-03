@@ -16,8 +16,8 @@ extern crate stm32f7_discovery;
 extern crate smoltcp;
 
 
-use alloc::boxed::Box;
-use pin_utils::pin_mut;
+// use alloc::boxed::Box;
+// use pin_utils::pin_mut;
 use alloc::vec::Vec;
 use alloc_cortex_m::CortexMHeap;
 use core::alloc::Layout as AllocLayout;
@@ -104,9 +104,10 @@ fn main() -> ! {
 
     layer_1.clear();
     layer_2.clear();
+
     lcd::init_stdout(layer_2);
 
-    println!("Hello World");
+    //println!("Hello World");
 
     //layer_1.print_point_color_at(0,0, Color::from_hex(0xFFFFFF));
 
@@ -130,18 +131,21 @@ fn main() -> ! {
     touch::check_family_id(&mut i2c_3).unwrap();
 
     let mut rng = Rng::init(&mut rng, &mut rcc).expect("RNG init failed");
-    print!("Random numbers: ");
-    for _ in 0..4 {
-        print!(
-            "{} ",
-            rng.poll_and_get()
-                .expect("Failed to generate random number")
-        );
-    }
-    println!("");
+    // print!("Random numbers: ");
+    // for _ in 0..4 {
+    //     print!(
+    //         "{} ",
+    //         rng.poll_and_get()
+    //             .expect("Failed to generate random number")
+    //     );
+    // }
+    // println!("");
 
-    fn test(){
-        println!("ButtonTest")
+    fn test_1(){
+        println!("ButtonTest1");
+    }
+    fn test_2(){
+        println!("ButtonTest2");
     }
 
     let mut draw_items = Vec::new();
@@ -153,7 +157,7 @@ fn main() -> ! {
             x_size: 50,
             y_size: 50,
             text: "Test",
-            touch: test
+            touch: test_1
         }
     );
 
@@ -164,7 +168,7 @@ fn main() -> ! {
             x_size: 50,
             y_size: 50,
             text: "Test",
-            touch: test
+            touch: test_2
         }
     );
 
@@ -204,6 +208,10 @@ fn main() -> ! {
     ).expect("could not bind udp socket");
 
     let mut previous_button_state = pins.button.get();
+
+    // Set the default Touch State
+    let mut previous_touch_state = false;
+
     loop {
         // poll button state
         let current_button_state = pins.button.get();
@@ -217,6 +225,8 @@ fn main() -> ! {
 
             previous_button_state = current_button_state;
         }
+
+        let mut number_of_touches = 0;
 
         // poll for new touch data
         for touch in &touch::touches(&mut i2c_3).unwrap() {
@@ -246,20 +256,34 @@ fn main() -> ! {
             //     item.draw(&mut layer_1);
             // }
 
-            let touch_x = touch.x as usize;
-            let touch_y = touch.y as usize;
+            // TODO: Multitouch ist nicht mehr möglich
+            // Möglicher Fix: Button finden, der gerade gedrückt wird und die Koordinaten ignorieren
+            if previous_touch_state == false{
+                previous_touch_state = true;
 
-            for item in &mut draw_items {
-                if(touch_x >= item.x_pos
-                    && touch_x <= (item.x_pos + item.x_size)
-                    && touch_y >= item.y_pos
-                    && touch_y <= (item.y_pos + item.y_size)
-                ){
-                    println!("Touched Button")
+                let touch_x = touch.x as usize;
+                let touch_y = touch.y as usize;
+
+                for item in &mut draw_items {
+                    if touch_x >= item.x_pos
+                        && touch_x <= (item.x_pos + item.x_size)
+                        && touch_y >= item.y_pos
+                        && touch_y <= (item.y_pos + item.y_size)
+                    {
+                        //println!("Touched Button");
+                        (item.touch)();
+                    }
+                    
                 }
-                
             }
 
+            number_of_touches += 1;
+
+        }
+
+        if number_of_touches == 0{
+            //println!("NO TOUCH");
+            previous_touch_state = false;
         }
 
         // handle new ethernet packets
@@ -442,6 +466,17 @@ pub struct ButtonText<'a> {
     touch: fn()
 }
 
+// impl<'a> ButtonText<'a>{
+//     fn newline(&mut self) {
+//         self.y_pos += 8;
+//         self.x_pos = 0;
+//         if self.y_pos >= HEIGHT {
+//             self.y_pos = 0;
+//             self.layer.clear();
+//         }
+//     }
+// }
+
 impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
     fn draw(&mut self, layer: &mut Layer<T>) {
         use font8x8::{self, UnicodeFonts};
@@ -462,6 +497,10 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
         let mut temp_x_pos = self.x_pos;
 
         for c in self.text.chars() {
+            // if c == '\n' {
+            //     self.newline();
+            //     continue;
+            // }
             match c {
                 ' '..='~' => {
                     let rendered = font8x8::BASIC_FONTS

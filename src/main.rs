@@ -220,31 +220,46 @@ fn main() -> ! {
 
         // poll for new touch data
         for touch in &touch::touches(&mut i2c_3).unwrap() {
-            layer_1.print_point_color_at(
-                touch.x as usize,
-                touch.y as usize,
-                Color::from_hex(0xffff00),
-            );
+            // layer_1.print_point_color_at(
+            //     touch.x as usize,
+            //     touch.y as usize,
+            //     Color::from_hex(0xffff00),
+            // );
 
             //println!("{}", draw_items.len());
-            let new_x_pos = (rng.poll_and_get().expect("Failed to generate random number")%350) as usize;
-            let new_y_pos = (rng.poll_and_get().expect("Failed to generate random number")%150) as usize;
-            println!("{}", new_x_pos);
-            println!("{}", new_y_pos);
-            draw_items.push(
-                ButtonText{
-                    x_pos: new_x_pos,
-                    y_pos: new_y_pos,
-                    x_size: 50,
-                    y_size: 50,
-                    text: "Test",
-                    touch: test
-                }
-            );
+            // let new_x_pos = (rng.poll_and_get().expect("Failed to generate random number")%350) as usize;
+            // let new_y_pos = (rng.poll_and_get().expect("Failed to generate random number")%150) as usize;
+            // println!("{}", new_x_pos);
+            // println!("{}", new_y_pos);
+            // draw_items.push(
+            //     ButtonText{
+            //         x_pos: new_x_pos,
+            //         y_pos: new_y_pos,
+            //         x_size: 50,
+            //         y_size: 50,
+            //         text: "Test",
+            //         touch: test
+            //     }
+            // );
+
+            // for item in &mut draw_items {
+            //     item.draw(&mut layer_1);
+            // }
+
+            let touch_x = touch.x as usize;
+            let touch_y = touch.y as usize;
 
             for item in &mut draw_items {
-                item.draw(&mut layer_1);
+                if(touch_x >= item.x_pos
+                    && touch_x <= (item.x_pos + item.x_size)
+                    && touch_y >= item.y_pos
+                    && touch_y <= (item.y_pos + item.y_size)
+                ){
+                    println!("Touched Button")
+                }
+                
             }
+
         }
 
         // handle new ethernet packets

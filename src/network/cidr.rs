@@ -1,38 +1,54 @@
-enum CidrType {
+use smoltcp::wire::Ipv4Address;
+
+pub enum Cidr {
     Ipv4Cidr,
-    Ipv6Cidr,
+    // Ipv6Cidr,
 }
 
-struct Ipv4Cidr {
-    addr: Ipv4Address,
-    size: u8,
+pub enum IpAddr {
+    Ipv4Addr,
+    // Ipv6Addr,
 }
 
-struct Ipv4Address {
-    addr: [u8; 4],
+type Ipv4Addr = u32;
+// type Ipv6Addr = u128;
+
+pub struct Ipv4Cidr {
+    first_addr: Ipv4Addr,
+    last_addr: Ipv4Addr,
+    pub addr: Ipv4Addr,
+    netmask: u8,
 }
 
-struct Ipv6Cidr {
-    addr: Ipv6Address,
-    size: u8,
-}
+// pub struct Ipv6Cidr {
+//     first_addr: Ipv6Addr,
+//     last_addr: Ipv6Addr,
+//     addr: Ipv6Addr,
+//     netmask: u8,
+// }
 
-struct Ipv6Address {
-    addr: [u8; 16],
-}
-
-impl Iterator for CidrType {
+impl Iterator for Cidr {
+    type Item = Cidr;
     fn next(&mut self) -> Option<Self::Item> {
         match *self {
-            CidrType::Ipv4Cidr => self.next(),
-            CidrType::Ipv6Cidr => self.next(),
+            Cidr::Ipv4Cidr => self.next(),
+            // Cidr::Ipv6Cidr => self.next(),
         }
     }
 }
 
+// impl Cidr {
+// }
+
 impl Iterator for Ipv4Cidr {
+    type Item = Ipv4Addr;
     fn next(&mut self) -> Option<Self::Item> {
-        self.addr.inc(self.size);
+        if self.addr < self.last_addr {
+            self.addr += 1;
+            Some(self.addr)
+        } else {
+            None
+        }
     }
 }
 
@@ -40,77 +56,76 @@ impl Ipv4Cidr {
     fn max_size() -> u8 {
         return 32;
     }
-}
 
-impl Ipv4Address {
-    fn inc(&mut self, mask: u8) -> bool {
-        match self.get_incrementable_idx() {
-            Some(idx) => {
-                let free_bits = (idx * 8) as u8 + self.addr[idx].leading_zeros() as u8 - mask;
-                if self.addr[idx] < 2 ^ free_bits {
-                    if self.addr[idx] >= 254 {
-                        self.addr[idx] = 0;
-                        self.addr[idx - 1] += 1;
-                    } else {
-                        self.addr[idx] += 1
-                    }
-                    return true;
-                } else {
-                    return false;
+    pub fn from_str(s: &str) -> Result<Self, &'static str> {
+        let (addr_str, mask_str) = match split_ip_netmask(s) {
+            Some(parts) => parts,
+            None => return Err("Ipv4Cidr Parse Failure"),
+        };
+        let mut shift = 24;
+        let mut addr: Ipv4Addr = 0;
+        for octet in addr_str.split('.') {
+            let a = match octet.parse::<u8>() {
+                Ok(a) => a,
+                Err(_) => return Err("Ipv4Address Parse Failure"),
+            };
+            addr |= (a as Ipv4Addr) << shift;
+            shift -= 8;
+        }
+        let netmask = match mask_str.parse::<u8>() {
+            Ok(a) => {
+                if a > Ipv4Cidr::max_size() {
+                    return Err("Ipv4 Netmask too large");
                 }
+                a
             },
-            None => return false,
-        }
+            Err(_) => return Err("Ipv4 Netmask Parse Failure"),
+        };
+        let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
+        return Ok(Ipv4Cidr {
+            first_addr: addr & mask,
+            last_addr: (addr & mask) | !mask,
+            addr: addr,
+            netmask: netmask,
+        });
     }
 
-    fn get_incrementable_idx(&mut self) -> Option<usize> {
-        for i in (0..3).rev() {
-            if self.addr[i] < 254 {
-                return Some(i);
-            }
-        }
-        return None;
-    }
-}
-
-impl Iterator for Ipv6Cidr {
-    fn next(&mut self) -> Option<Self::Item> {
+    pub fn reset(&mut self) {
+        self.addr = self.first_addr;
     }
 }
 
-impl Ipv6Cidr {
-    fn max_size() -> u8 {
-        return 128;
+// impl Iterator for Ipv6Cidr {
+//     type Item = Ipv6Addr;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         if self.addr < self.last_addr {
+//             self.addr += 1;
+//             Some(self.addr)
+//         } else {
+//             None
+//         }
+//     }
+// }
+
+pub fn to_ipv4_address(addr: Ipv4Addr) -> Ipv4Address {
+    let mut octets: [u8; 4] = [0; 4];
+    for offset in (0..3).rev() {
+        octets[3 - offset] = (addr & (0xFF << (offset * 8)) >> offset) as u8;
     }
+    Ipv4Address::new(octets[0], octets[1], octets[2], octets[3])
 }
 
-impl Ipv6Address {
-    fn inc(&mut self, mask: u8) -> bool {
-        match self.get_incrementable_idx() {
-            Some(idx) => {
-                let free_bits = (idx * 8) as u8 + self.addr[idx].leading_zeros() as u8 - mask;
-                if self.addr[idx] < 2 ^ free_bits {
-                    if self.addr[idx] >= 254 {
-                        self.addr[idx] = 0;
-                        self.addr[idx - 1] += 1;
-                    } else {
-                        self.addr[idx] += 1
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-            },
-            None => return false,
-        }
-    }
+fn split_ip_netmask(input: &str) -> Option<(&str, &str)> {
+    let delimiter = match input.find('/') {
+        Some(pos) => pos,
+        None => return None,
+    };
+    let (ip, mask) = input.split_at(delimiter);
+    let mask = &mask[1..];
 
-    fn get_incrementable_idx(&mut self) -> Option<usize> {
-        for i in (0..15).rev() {
-            if self.addr[i] < 254 {
-                return Some(i);
-            }
-        }
-        return None;
+    if ip.is_empty() || mask.is_empty() {
+        None
+    } else {
+        Some((ip, mask))
     }
 }

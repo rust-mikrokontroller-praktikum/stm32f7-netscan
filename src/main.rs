@@ -360,9 +360,9 @@ where
             &mut self.ethernet_mac,
             &mut self.ethernet_dma,
             ETH_ADDR,
-        )
-        .map(|device| device.into_interface());
-        let mut iface = match ethernet_interface {
+        );
+        
+        let mut raw_iface = match ethernet_interface {
             Ok(iface) => iface,
             Err(e) => {
                 println!("ethernet init failed: {:?}", e);
@@ -370,10 +370,15 @@ where
             }
         };
 
+        match network::cidr::Ipv4Cidr::from_str("192.168.1.1/24") {
+            Ok(mut c) => network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c),
+            Err(x) => println!("{}", x),
+        };
+
+        let mut iface = raw_iface.into_interface();
+
         let idle_stream = self.idle_stream;
         pin_mut!(idle_stream);
-
-        network::arp::get_neighbors_v4(iface.ethernet_addr());
 
         let mut sockets = SocketSet::new(Vec::new());
 

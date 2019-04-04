@@ -22,6 +22,8 @@ use stm32f7_discovery::lcd::FramebufferArgb8888;
 use alloc::boxed::Box;
 // use pin_utils::pin_mut;
 use alloc::vec::Vec;
+use alloc::string::String;
+use alloc::string::ToString;
 use alloc_cortex_m::CortexMHeap;
 use core::alloc::Layout as AllocLayout;
 use core::fmt::Write;
@@ -144,13 +146,12 @@ fn main() -> ! {
     // }
     // println!("");
 
+
+    // Initialise the Start UI
     let mut current_ui_state = UiState{current_ui_state: UiStates::Start};
     let mut draw_items = Vec::<Box<UiElement<FramebufferArgb8888>>>::new();
 
     current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, UiStates::Start);
-
-    
-
 
 
     // ethernet
@@ -250,7 +251,7 @@ fn main() -> ! {
                         //println!("Touched Button");
                         if item.get_name() == "ButtonStart"{
                             new_ui_state = UiStates::Start;
-                        } else if item.get_name() == "Button1"{
+                        } else if item.get_name() == "ButtonInfo"{
                             new_ui_state = UiStates::Info;
                         }
                         // else {
@@ -441,11 +442,17 @@ fn panic(info: &PanicInfo) -> ! {
 
 
 trait UiElement<T: Framebuffer> {
-    fn get_name(&mut self) -> &str;
+    //fn new(name: &'static str, x_pos: usize, y_pos: usize, x_size: usize, y_size: usize) -> Self;
+
+    fn get_name(&mut self) -> String;
     fn get_x_pos(&mut self) -> usize;
     fn get_y_pos(&mut self) -> usize;
     fn get_x_size(&mut self) -> usize;
     fn get_y_size(&mut self) -> usize;
+
+    fn set_text(&mut self, text: String);
+    fn set_background_color(&mut self, color: Color);
+    fn set_text_color(&mut self, color: Color);
 
     //fn run_touch_func(&mut self);
 
@@ -453,13 +460,15 @@ trait UiElement<T: Framebuffer> {
 }
 
 
-pub struct ButtonText<'a> {
-    name: &'a str,
+pub struct ButtonText {
+    name: String,
     x_pos: usize,
     y_pos: usize,
     x_size: usize,
     y_size: usize,
-    text: &'a str,
+    text: String,
+    background_color: Color,
+    text_color: Color,
     //touch: fn()
 }
 
@@ -474,9 +483,9 @@ pub struct ButtonText<'a> {
 //     }
 // }
 
-impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
-    fn get_name(&mut self) -> &str{
-        self.name
+impl<T: Framebuffer> UiElement<T> for ButtonText {
+    fn get_name(&mut self) -> String{
+        self.name.clone()
     }
 
     fn get_x_pos(&mut self) -> usize{
@@ -495,6 +504,18 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
         self.y_size
     }
     
+    fn set_text(&mut self, text: String){
+        self.text = text;
+    }
+
+    fn set_background_color(&mut self, color: Color){
+        self.background_color = color;
+    }
+
+    fn set_text_color(&mut self, color: Color){
+        self.text_color = color;
+    }
+
     // fn run_touch_func(&mut self){
     //     (self.touch)()
     // }
@@ -510,7 +531,7 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
                                 blue: 0,
                                 alpha: 255,
                             };
-                layer.print_point_color_at(x, y, color);
+                layer.print_point_color_at(x, y, self.background_color);
             }
             
         }
@@ -537,7 +558,7 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
                                 alpha,
                             };
                             if alpha != 0{
-                                layer.print_point_color_at(temp_x_pos + x, self.y_pos + y, color);
+                                layer.print_point_color_at(temp_x_pos + x, self.y_pos + y, self.text_color);
                             }
                         }
                     }
@@ -549,26 +570,28 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
     }
 }
 
-pub struct ScrollableText<'a> {
-    name: &'a str,
+pub struct ScrollableText {
+    name: String,
     x_pos: usize,
     y_pos: usize,
     x_size: usize,
     y_size: usize,
     lines_show: usize,
-    lines: &'a str,
+    lines: String,
     lines_start: usize,
+    background_color: Color,
+    text_color: Color,
 }
 
-impl<'a> ScrollableText<'a> {
+impl ScrollableText {
     fn set_lines_start(&mut self, lines_start: usize) {
         self.lines_start = lines_start;
     }
 }
 
-impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
-    fn get_name(&mut self) -> &str{
-        self.name
+impl<T: Framebuffer> UiElement<T> for ScrollableText {
+    fn get_name(&mut self) -> String{
+        self.name.clone()
     }
 
     fn get_x_pos(&mut self) -> usize{
@@ -586,6 +609,18 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
     fn get_y_size(&mut self) -> usize{
         self.y_size
     }
+
+    fn set_text(&mut self, text: String){
+        //self.lines = String::from(text);
+    }
+
+    fn set_background_color(&mut self, color: Color){
+        self.background_color = color;
+    }
+
+    fn set_text_color(&mut self, color: Color){
+        self.text_color = color;
+    }
     
     // fn run_touch_func(&mut self){
     // }
@@ -601,7 +636,7 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
                                 blue: 0,
                                 alpha: 255,
                             };
-                layer.print_point_color_at(x, y, color);
+                layer.print_point_color_at(x, y, self.background_color);
             }
             
         }
@@ -631,12 +666,8 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
                             for (y, byte) in rendered.iter().enumerate() {
                                 for (x, bit) in (0..8).enumerate() {
                                     let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
-                                    let color = Color {
-                                        red: 255,
-                                        green: 255,
-                                        blue: 255,
-                                        alpha,
-                                    };
+                                    let mut color = self.text_color;
+                                    color.alpha = alpha;
                                     if alpha != 0{
                                         layer.print_point_color_at(temp_x_pos + x, temp_y_pos + y, color);
                                     }
@@ -674,6 +705,7 @@ impl UiState {
     fn get_ui_state(&mut self) -> UiStates{
         self.current_ui_state
     }
+
     fn change_ui_state(&mut self, layer: &mut Layer<FramebufferArgb8888>, draw_items: &mut Vec<Box<UiElement<FramebufferArgb8888>>>, new_ui_state: UiStates){
 
         // Clear everything
@@ -683,12 +715,26 @@ impl UiState {
             draw_items.push(
                 Box::new(
                     ButtonText{
-                        name: "Button1",
+                        name: String::from("ButtonInfo"),
                         x_pos: 200,
                         y_pos: 200,
                         x_size: 50,
                         y_size: 50,
-                        text: "Button1",
+                        text: String::from("Info"),
+                        background_color:
+                            Color {
+                                red: 0,
+                                green: 255,
+                                blue: 0,
+                                alpha: 255,
+                            },
+                        text_color:
+                            Color {
+                                red: 255,
+                                green: 255,
+                                blue: 255,
+                                alpha: 255,
+                            },
                     }
                 )
             );
@@ -696,12 +742,26 @@ impl UiState {
             draw_items.push(
                 Box::new(
                     ButtonText{
-                        name: "Button2",
+                        name: String::from("Button2"),
                         x_pos: 300,
                         y_pos: 200,
                         x_size: 50,
                         y_size: 50,
-                        text: "Button2",
+                        text: String::from("Button2"),
+                        background_color:
+                            Color {
+                                red: 0,
+                                green: 255,
+                                blue: 0,
+                                alpha: 255,
+                            },
+                        text_color:
+                            Color {
+                                red: 255,
+                                green: 255,
+                                blue: 255,
+                                alpha: 255,
+                            },
                     }
                 )
             );
@@ -709,14 +769,28 @@ impl UiState {
             draw_items.push(
                 Box::new(
                     ScrollableText{
-                        name: "ScrollText1",
+                        name: String::from("ScrollText1"),
                         x_pos: 50,
                         y_pos: 50,
                         x_size: 100,
                         y_size: 100,
                         lines_show: 2,
-                        lines: "Test\nTest2\nTest3\nTest4",
+                        lines: String::from("Test\nTest2\nTest3\nTest4"),
                         lines_start: 1,
+                        background_color:
+                            Color {
+                                red: 0,
+                                green: 255,
+                                blue: 0,
+                                alpha: 255,
+                            },
+                        text_color:
+                            Color {
+                                red: 255,
+                                green: 255,
+                                blue: 255,
+                                alpha: 255,
+                            },
                     }
                 )
             );
@@ -724,12 +798,26 @@ impl UiState {
             draw_items.push(
                 Box::new(
                     ButtonText{
-                        name: "ButtonStart",
+                        name: String::from("ButtonStart"),
                         x_pos: 350,
                         y_pos: 50,
                         x_size: 50,
                         y_size: 50,
-                        text: "Start",
+                        text: String::from("Start"),
+                        background_color:
+                            Color {
+                                red: 0,
+                                green: 255,
+                                blue: 0,
+                                alpha: 255,
+                            },
+                        text_color:
+                            Color {
+                                red: 255,
+                                green: 255,
+                                blue: 255,
+                                alpha: 255,
+                            },
                     }
                 )
             );
@@ -747,3 +835,4 @@ impl UiState {
         self.current_ui_state = new_ui_state;
     }
 }
+

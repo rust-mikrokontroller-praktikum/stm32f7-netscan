@@ -144,58 +144,12 @@ fn main() -> ! {
     // }
     // println!("");
 
-    fn test_1(){
-        println!("ButtonTest1");
-    }
-    fn test_2(){
-        println!("ButtonTest2");
-    }
-
+    let mut current_ui_state = UiState{current_ui_state: UiStates::Start};
     let mut draw_items = Vec::<Box<UiElement<FramebufferArgb8888>>>::new();
 
-    draw_items.push(
-        Box::new(
-            ButtonText{
-                x_pos: 100,
-                y_pos: 100,
-                x_size: 50,
-                y_size: 50,
-                text: "Test",
-                touch: test_1
-            }
-        )
-    );
+    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, UiStates::Start);
 
-    draw_items.push(
-        Box::new(
-            ButtonText{
-                x_pos: 200,
-                y_pos: 200,
-                x_size: 50,
-                y_size: 50,
-                text: "Test",
-                touch: test_2
-            }
-        )
-    );
-
-    draw_items.push(
-        Box::new(
-            ScrollableText{
-                x_pos: 50,
-                y_pos: 50,
-                x_size: 100,
-                y_size: 100,
-                lines: 2,
-                text: "Test\nTest2\nTest3",
-                text_line: 0,
-            }
-        )
-    );
-
-    for item in &mut draw_items {
-        item.draw(&mut layer_1);
-    }
+    
 
 
 
@@ -681,10 +635,81 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
         
     }
 }
+
+#[derive(PartialEq)]
+enum UiStates{
+    Start,
+    Info
+}
+
+struct UiState{
+    current_ui_state: UiStates
+}
+
+impl UiState {
+    fn change_ui_state(&mut self, layer: &mut Layer<FramebufferArgb8888>, draw_items: &mut Vec<Box<UiElement<FramebufferArgb8888>>>, new_ui_state: UiStates){
+
+        // Clear everything
+        draw_items.clear();
+
+        if new_ui_state == UiStates::Start{
+            fn test_1(){
+                println!("ButtonTest1");
             }
-            count += 1;
+            fn test_2(){
+                println!("ButtonTest2");
+            }
+
+            draw_items.push(
+                Box::new(
+                    ButtonText{
+                        x_pos: 200,
+                        y_pos: 200,
+                        x_size: 50,
+                        y_size: 50,
+                        text: "Button1",
+                        touch: test_1
+                    }
+                )
+            );
+
+            draw_items.push(
+                Box::new(
+                    ButtonText{
+                        x_pos: 300,
+                        y_pos: 200,
+                        x_size: 50,
+                        y_size: 50,
+                        text: "Button2",
+                        touch: test_2
+                    }
+                )
+            );
+
+            draw_items.push(
+                Box::new(
+                    ScrollableText{
+                        x_pos: 50,
+                        y_pos: 50,
+                        x_size: 100,
+                        y_size: 100,
+                        lines_show: 2,
+                        lines: "Test\nTest2\nTest3\nTest4",
+                        lines_start: 1,
+                    }
+                )
+            );
         }
 
-        
+
+        //Clear and redraw
+        layer.clear();
+
+        for item in draw_items {
+            item.draw(layer);
+        }
+
+        println!("Changed Ui");
+        self.current_ui_state = new_ui_state;
     }
 }

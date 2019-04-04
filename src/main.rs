@@ -165,45 +165,58 @@ fn main() -> ! {
         &mut ethernet_mac,
         &mut ethernet_dma,
         ETH_ADDR,
-    );
-
-    let mut raw_iface = match ethernet_interface {
-        Ok(iface) => iface,
-        Err(e) => {
-            // FIXME: Don't panic, just retry later
-            panic!("ethernet init failed: {:?}", e);
-        }
+    )
+    .map(|device| {
+        let iface = device.into_interface();
+        let prev_ip_addr = iface.ipv4_addr().unwrap();
+        (iface, prev_ip_addr)
+    });
+    if let Err(e) = ethernet_interface {
+        println!("ethernet init failed: {:?}", e);
     };
-
-    let cidr = network::cidr::Ipv4Cidr::from_str("192.168.1.0/24").unwrap();
-    let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-        Ok(mut c) => {
-            match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
-                Ok(neigh) => neigh,
-                Err(x) => {
-                    panic!("{}", x);
-                },
-            };
-        },
-        Err(x) => {
-            panic!("{}", x);
-        },
-    };
-
-    println!("Neighbors: {:?}", neighbors);
-
-    let mut iface = raw_iface.into_interface();
-    let prev_ip_addr = iface.ipv4_addr().unwrap();
 
     let mut sockets = SocketSet::new(Vec::new());
-    let dhcp_rx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);
-    let dhcp_tx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 3000]);
-    let mut dhcp = Dhcpv4Client::new(
-        &mut sockets,
-        dhcp_rx_buffer,
-        dhcp_tx_buffer,
-        Instant::from_millis(system_clock::ms() as i64),
-    ).expect("could not bind udp socket");
+    if let Ok((ref mut iface, _)) = ethernet_interface {
+        let icmp_neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+            Ok(mut c) => {
+                println!("Sending ICMPv4 probes");
+                network::icmp::scan_v4(iface, &mut sockets, &mut rng, &mut c);
+            },
+            Err(x) => {
+                panic!("{}", x);
+            },
+        };
+        println!("Icmp Neighbors: {:?}", icmp_neighbors);
+    };
+
+    // let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+    //     Ok(mut c) => {
+    //         match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
+    //             Ok(neigh) => neigh,
+    //             Err(x) => {
+    //                 panic!("{}", x);
+    //             },
+    //         };
+    //     },
+    //     Err(x) => {
+    //         panic!("{}", x);
+    //     },
+    // };
+
+    // println!("Neighbors: {:?}", neighbors);
+
+    // let mut iface = raw_iface.into_interface();
+    // let prev_ip_addr = iface.ipv4_addr().unwrap();
+
+    // let mut sockets = SocketSet::new(Vec::new());
+    // let dhcp_rx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);
+    // let dhcp_tx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 3000]);
+    // let mut dhcp = Dhcpv4Client::new(
+    //     &mut sockets,
+    //     dhcp_rx_buffer,
+    //     dhcp_tx_buffer,
+    //     Instant::from_millis(system_clock::ms() as i64),
+    // ).expect("could not bind udp socket");
 
     let mut previous_button_state = pins.button.get();
 

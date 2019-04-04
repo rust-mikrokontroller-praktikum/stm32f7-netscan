@@ -9,6 +9,7 @@ use stm32f7_discovery::{
 };
 use super::cidr;
 
+#[derive(Debug)]
 pub struct ArpResponse(Ipv4Address, EthernetAddress);
 
 pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4Address) -> Result<(), String> {

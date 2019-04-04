@@ -233,11 +233,13 @@ fn main() -> ! {
 
             // TODO: Multitouch ist nicht mehr möglich
             // Möglicher Fix: Button finden, der gerade gedrückt wird und die Koordinaten ignorieren
-            if previous_touch_state == false{
+            if !previous_touch_state{
                 previous_touch_state = true;
 
                 let touch_x = touch.x as usize;
                 let touch_y = touch.y as usize;
+
+                let mut new_ui_state = current_ui_state.get_ui_state();
 
                 for item in &mut draw_items {
                     if touch_x >= item.get_x_pos()
@@ -246,9 +248,20 @@ fn main() -> ! {
                         && touch_y <= (item.get_y_pos() + item.get_y_size())
                     {
                         //println!("Touched Button");
-                        item.run_touch_func();
+                        if item.get_name() == "ButtonStart"{
+                            new_ui_state = UiStates::Start;
+                        } else if item.get_name() == "Button1"{
+                            new_ui_state = UiStates::Info;
+                        }
+                        // else {
+                        //     item.run_touch_func();
+                        // }
                     }
                     
+                }
+
+                if new_ui_state != current_ui_state.get_ui_state(){
+                    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, new_ui_state);
                 }
             }
 
@@ -428,24 +441,26 @@ fn panic(info: &PanicInfo) -> ! {
 
 
 trait UiElement<T: Framebuffer> {
+    fn get_name(&mut self) -> &str;
     fn get_x_pos(&mut self) -> usize;
     fn get_y_pos(&mut self) -> usize;
     fn get_x_size(&mut self) -> usize;
     fn get_y_size(&mut self) -> usize;
 
-    fn run_touch_func(&mut self);
+    //fn run_touch_func(&mut self);
 
     fn draw(&mut self, layer: &mut Layer<T>);
 }
 
 
 pub struct ButtonText<'a> {
+    name: &'a str,
     x_pos: usize,
     y_pos: usize,
     x_size: usize,
     y_size: usize,
     text: &'a str,
-    touch: fn()
+    //touch: fn()
 }
 
 // impl<'a> ButtonText<'a>{
@@ -460,6 +475,10 @@ pub struct ButtonText<'a> {
 // }
 
 impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
+    fn get_name(&mut self) -> &str{
+        self.name
+    }
+
     fn get_x_pos(&mut self) -> usize{
         self.x_pos
     }
@@ -476,9 +495,9 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
         self.y_size
     }
     
-    fn run_touch_func(&mut self){
-        (self.touch)()
-    }
+    // fn run_touch_func(&mut self){
+    //     (self.touch)()
+    // }
     
     fn draw(&mut self, layer: &mut Layer<T>) {
         use font8x8::{self, UnicodeFonts};
@@ -531,6 +550,7 @@ impl<'a, T: Framebuffer> UiElement<T> for ButtonText<'a> {
 }
 
 pub struct ScrollableText<'a> {
+    name: &'a str,
     x_pos: usize,
     y_pos: usize,
     x_size: usize,
@@ -547,6 +567,10 @@ impl<'a> ScrollableText<'a> {
 }
 
 impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
+    fn get_name(&mut self) -> &str{
+        self.name
+    }
+
     fn get_x_pos(&mut self) -> usize{
         self.x_pos
     }
@@ -563,8 +587,8 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
         self.y_size
     }
     
-    fn run_touch_func(&mut self){
-    }
+    // fn run_touch_func(&mut self){
+    // }
 
     fn draw(&mut self, layer: &mut Layer<T>) {
         use font8x8::{self, UnicodeFonts};
@@ -587,7 +611,7 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
         let mut count_lines_start = 0;
         let mut count_lines_show = 0;
 
-        let lines_split: Vec<&str> = self.lines.split("\n").collect();
+        let lines_split: Vec<&str> = self.lines.split('\n').collect();
 
         //println!("Number of lines {}", lines_split.len());
 
@@ -636,7 +660,7 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 enum UiStates{
     Start,
     Info
@@ -647,28 +671,24 @@ struct UiState{
 }
 
 impl UiState {
+    fn get_ui_state(&mut self) -> UiStates{
+        self.current_ui_state
+    }
     fn change_ui_state(&mut self, layer: &mut Layer<FramebufferArgb8888>, draw_items: &mut Vec<Box<UiElement<FramebufferArgb8888>>>, new_ui_state: UiStates){
 
         // Clear everything
         draw_items.clear();
 
         if new_ui_state == UiStates::Start{
-            fn test_1(){
-                println!("ButtonTest1");
-            }
-            fn test_2(){
-                println!("ButtonTest2");
-            }
-
             draw_items.push(
                 Box::new(
                     ButtonText{
+                        name: "Button1",
                         x_pos: 200,
                         y_pos: 200,
                         x_size: 50,
                         y_size: 50,
                         text: "Button1",
-                        touch: test_1
                     }
                 )
             );
@@ -676,12 +696,12 @@ impl UiState {
             draw_items.push(
                 Box::new(
                     ButtonText{
+                        name: "Button2",
                         x_pos: 300,
                         y_pos: 200,
                         x_size: 50,
                         y_size: 50,
                         text: "Button2",
-                        touch: test_2
                     }
                 )
             );
@@ -689,6 +709,7 @@ impl UiState {
             draw_items.push(
                 Box::new(
                     ScrollableText{
+                        name: "ScrollText1",
                         x_pos: 50,
                         y_pos: 50,
                         x_size: 100,
@@ -696,6 +717,19 @@ impl UiState {
                         lines_show: 2,
                         lines: "Test\nTest2\nTest3\nTest4",
                         lines_start: 1,
+                    }
+                )
+            );
+        } else if new_ui_state == UiStates::Info{
+            draw_items.push(
+                Box::new(
+                    ButtonText{
+                        name: "ButtonStart",
+                        x_pos: 350,
+                        y_pos: 50,
+                        x_size: 50,
+                        y_size: 50,
+                        text: "Start",
                     }
                 )
             );

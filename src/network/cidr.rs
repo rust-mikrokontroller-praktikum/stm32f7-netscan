@@ -1,3 +1,4 @@
+use alloc::string::String;
 use smoltcp::wire::Ipv4Address;
 
 pub enum Cidr {
@@ -12,6 +13,20 @@ pub enum IpAddr {
 
 type Ipv4Addr = u32;
 // type Ipv6Addr = u128;
+
+trait Stringable {
+    fn to_string(&self) -> String;
+}
+
+impl Stringable for Ipv4Addr {
+    fn to_string(&self) -> String {
+        let mut octets: [u8; 4] = [0; 4];
+        for offset in (0..=3).rev() {
+            octets[3 - offset] = ((self & (0xFF << (offset * 8))) >> (offset * 8)) as u8;
+        }
+        format!("{}.{}.{}.{}", octets[0], octets[1], octets[2], octets[3])
+    }
+}
 
 pub struct Ipv4Cidr {
     first_addr: Ipv4Addr,
@@ -82,12 +97,14 @@ impl Ipv4Cidr {
             Err(_) => return Err("Ipv4 Netmask Parse Failure"),
         };
         let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
-        return Ok(Ipv4Cidr {
+        let res = Ipv4Cidr {
             first_addr: addr & mask,
             last_addr: (addr & mask) | !mask,
             addr: addr,
             netmask: netmask,
-        });
+        };
+        println!("first_addr: {}, last_addr: {}", res.first_addr.to_string(), res.last_addr.to_string());
+        Ok(res)
     }
 
     pub fn reset(&mut self) {
@@ -109,8 +126,8 @@ impl Ipv4Cidr {
 
 pub fn to_ipv4_address(addr: Ipv4Addr) -> Ipv4Address {
     let mut octets: [u8; 4] = [0; 4];
-    for offset in (0..3).rev() {
-        octets[3 - offset] = (addr & (0xFF << (offset * 8)) >> offset) as u8;
+    for offset in (0..=3).rev() {
+        octets[3 - offset] = ((addr & (0xFF << (offset * 8))) >> (offset * 8)) as u8;
     }
     Ipv4Address::new(octets[0], octets[1], octets[2], octets[3])
 }

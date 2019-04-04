@@ -637,13 +637,21 @@ pub struct ScrollableText {
     x_size: usize,
     y_size: usize,
     lines_show: usize,
-    lines: String,
+    lines: Vec<String>,
     lines_start: usize,
     background_color: Color,
     text_color: Color,
 }
 
 impl ScrollableText {
+    fn set_lines(&mut self, lines: Vec<String>){
+        self.lines = lines;
+    }
+
+    fn add_line(&mut self, line: String){
+        self.lines.push(line);
+    }
+
     fn set_lines_start(&mut self, lines_start: usize) {
         self.lines_start = lines_start;
     }
@@ -671,7 +679,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
     }
 
     fn set_text(&mut self, text: String){
-        //self.lines = String::from(text);
+        self.lines = vec!(text);
     }
 
     fn set_background_color(&mut self, color: Color){
@@ -706,11 +714,9 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         let mut count_lines_start = 0;
         let mut count_lines_show = 0;
 
-        let lines_split: Vec<&str> = self.lines.split('\n').collect();
-
         //println!("Number of lines {}", lines_split.len());
 
-        for line in lines_split{
+        for line in self.lines.iter(){
             if count_lines_start < self.lines_start{
                 //println!("Skip line");
             } else if count_lines_show >= self.lines_show{
@@ -835,7 +841,7 @@ impl UiState {
                         x_size: 100,
                         y_size: 100,
                         lines_show: 2,
-                        lines: String::from("Test\nTest2\nTest3\nTest4"),
+                        lines: vec!(String::from("Test"), String::from("Test2"), String::from("Test3"), String::from("Test4")),
                         lines_start: 1,
                         background_color:
                             Color {

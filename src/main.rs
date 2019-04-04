@@ -185,26 +185,26 @@ fn main() -> ! {
 
     // println!("Arp probe");
     // network::arp::request(&mut raw_iface, ETH_ADDR, Ipv4Address::new(192, 168, 1, 200));
-    let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-        Ok(mut c) => {
-            match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
-                Ok(neigh) => neigh,
-                Err(x) => {
-                    panic!("{}", x);
-                },
-            }
-        },
-        Err(x) => {
-            panic!("{}", x);
-        },
-    };
-    println!("Neighbors: {:?}", neighbors);
+    // let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+    //     Ok(mut c) => {
+    //         match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
+    //             Ok(neigh) => neigh,
+    //             Err(x) => {
+    //                 panic!("{}", x);
+    //             },
+    //         }
+    //     },
+    //     Err(x) => {
+    //         panic!("{}", x);
+    //     },
+    // };
+    // println!("Neighbors: {:?}", neighbors);
 
 
-    let mut iface = raw_iface.into_interface();
+    // let mut iface = raw_iface.into_interface();
     // let prev_ip_addr = iface.ipv4_addr().unwrap();
 
-    let mut sockets = SocketSet::new(Vec::new());
+    // let mut sockets = SocketSet::new(Vec::new());
     // if let Ok((ref mut iface, _)) = ethernet_interface {
         // let icmp_neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
         //     Ok(mut c) => {
@@ -298,6 +298,21 @@ fn main() -> ! {
                             new_ui_state = UiStates::Start;
                         } else if item.get_name() == "ButtonInfo"{
                             new_ui_state = UiStates::Info;
+                        } else if item.get_name() == "ARP_SCAN" {
+                            let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+                                Ok(mut c) => {
+                                    match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
+                                        Ok(neigh) => neigh,
+                                        Err(x) => {
+                                            panic!("{}", x);
+                                        },
+                                    }
+                                },
+                                Err(x) => {
+                                    panic!("{}", x);
+                                },
+                            };
+                            println!("Neighbors: {:?}", neighbors);
                         }
                         // else {
                         //     item.run_touch_func();
@@ -787,12 +802,12 @@ impl UiState {
             draw_items.push(
                 Box::new(
                     ButtonText{
-                        name: String::from("Button2"),
+                        name: String::from("ARP_SCAN"),
                         x_pos: 300,
                         y_pos: 200,
                         x_size: 50,
                         y_size: 50,
-                        text: String::from("Button2"),
+                        text: String::from("ARP Scan"),
                         background_color:
                             Color {
                                 red: 0,

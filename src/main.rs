@@ -581,9 +581,15 @@ pub struct ScrollableText<'a> {
     y_pos: usize,
     x_size: usize,
     y_size: usize,
-    lines: usize,
-    text: &'a str,
-    text_line: usize,
+    lines_show: usize,
+    lines: &'a str,
+    lines_start: usize,
+}
+
+impl<'a> ScrollableText<'a> {
+    fn set_lines_start(&mut self, lines_start: usize) {
+        self.lines_start = lines_start;
+    }
 }
 
 impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
@@ -623,15 +629,19 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
         }
 
         let mut temp_x_pos = self.x_pos;
-        let mut count = 0;
-        let mut count_lines = 0;
+        let mut temp_y_pos = self.y_pos;
+        let mut count_lines_start = 0;
+        let mut count_lines_show = 0;
 
-        let lines = self.text.split("\n");
+        let lines_split: Vec<&str> = self.lines.split("\n").collect();
 
-        for line in lines{
-            if count < self.text_line{
-                continue;
-            } else if count_lines >= self.lines{
+        //println!("Number of lines {}", lines_split.len());
+
+        for line in lines_split{
+            if count_lines_start < self.lines_start{
+                //println!("Skip line");
+            } else if count_lines_show >= self.lines_show{
+                //println!("End line");
                 break;
             } else {
                 for c in line.chars() {
@@ -650,7 +660,7 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
                                         alpha,
                                     };
                                     if alpha != 0{
-                                        layer.print_point_color_at(temp_x_pos + x, self.y_pos + y, color);
+                                        layer.print_point_color_at(temp_x_pos + x, temp_y_pos + y, color);
                                     }
                                 }
                             }
@@ -659,7 +669,18 @@ impl<'a, T: Framebuffer> UiElement<T> for ScrollableText<'a> {
                     }
                     temp_x_pos += 8;
                 }
-                count_lines += 1;
+                count_lines_show += 1;
+
+                //New line inside the box
+                temp_x_pos = self.x_pos;
+                temp_y_pos += 8;
+            }
+            count_lines_start += 1;
+        }
+
+        
+    }
+}
             }
             count += 1;
         }

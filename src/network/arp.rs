@@ -12,6 +12,22 @@ use super::cidr;
 #[derive(Debug)]
 pub struct ArpResponse(Ipv4Address, EthernetAddress);
 
+pub type ArpResponses = Vec<ArpResponse>;
+
+pub trait StringableVec {
+    fn to_string_vec(&self) -> Vec<String>;
+}
+
+impl StringableVec for ArpResponses {
+    fn to_string_vec(&self) -> Vec<String> {
+        let mut ret: Vec<String> = Vec::new();
+        for i in self.iter() {
+            ret.push(format!("{} ({})", i.0, i.1));
+        }
+        ret
+    }
+}
+
 pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4Address) -> Result<(), String> {
     let mut arp_req = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Request,
@@ -41,7 +57,7 @@ pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4
     }
 }
 
-pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, cidr: &mut cidr::Ipv4Cidr) -> Result<Vec<ArpResponse>, String> {
+pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, cidr: &mut cidr::Ipv4Cidr) -> Result<ArpResponses, String> {
     let mut found_addrs = Vec::<ArpResponse>::new();
     let mut arp_req = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Request,

@@ -3,7 +3,10 @@ use alloc::string::{String, ToString};
 use smoltcp::phy::{Device, RxToken, TxToken};
 use smoltcp::time::Instant;
 use smoltcp::wire::*;
-use stm32f7_discovery::ethernet::EthernetDevice;
+use stm32f7_discovery::{
+    ethernet::EthernetDevice,
+    system_clock,
+};
 use super::cidr;
 
 pub struct ArpResponse(Ipv4Address, EthernetAddress);
@@ -30,7 +33,7 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
             Some(x) => x,
             None => return Err(String::from("No tx descriptor available")),
         };
-        match dispatch_ethernet(eth_addr, tx_token, Instant::from_millis(0), arp_req.buffer_len(), |mut frame| {
+        match dispatch_ethernet(eth_addr, tx_token, Instant::from_millis(system_clock::ms() as i64), arp_req.buffer_len(), |mut frame| {
             frame.set_dst_addr(EthernetAddress::BROADCAST);
             frame.set_ethertype(EthernetProtocol::Arp);
 
@@ -41,30 +44,45 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
             Err(x) => return Err(x.to_string()),
         }
 
-        let mut got_answer = false;
-        let mut repl_addr = ArpResponse(Ipv4Address::new(0, 0, 0, 0), EthernetAddress::BROADCAST);
-        loop {
-            let (rx_token, _) = match iface.receive() {
-                None => break,
-                Some(tokens) => tokens,
-            };
-            match rx_token.consume(Instant::from_millis(0), |frame| {
-                match process_arp(eth_addr, &frame) {
-                    Ok(x) => {
-                        got_answer = true;
-                        return Ok(x);
-                    },
-                    Err(x) => return Err(x),
-                };}) {
-                Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => repl_addr = ArpResponse(source_protocol_addr, source_hardware_addr),
-                Ok(_) => {},
-                Err(_) => break,
-            };
-            }
-        if got_answer {
-            found_addrs.push(repl_addr);
-        }
     }
+    let mut tries = 0;
+    loop {
+        // match iface.rx.receive(|frame| {
+        //     match process_arp(eth_addr, &frame) {
+        //         Ok(x) => {
+        //             return Ok(x);
+        //         },
+        //         Err(x) => return Err(x),
+        //     };}) {
+        //     Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => found_addrs.push(ArpResponse(source_protocol_addr, source_hardware_addr)),
+        //     Ok(_) => {},
+        //     Err(e) => println!("{:?}", e),
+        // };
+        // }
+        let (rx_token, _) = match iface.receive() {
+            None => {
+                if tries > 100 {
+                    println!("Didn't receive answers to ARP");
+                    break;
+                }
+                tries += 1;
+                system_clock::wait_ms(100);
+                continue
+            },
+            Some(tokens) => tokens,
+        };
+        match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
+            match process_arp(eth_addr, &frame) {
+                Ok(x) => {
+                    return Ok(x);
+                },
+                Err(x) => return Err(x),
+            };}) {
+            Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => found_addrs.push(ArpResponse(source_protocol_addr, source_hardware_addr)),
+            Ok(_) => {},
+            Err(e) => println!("{:?}", e),
+        };
+        }
     return Ok(found_addrs);
 }
 

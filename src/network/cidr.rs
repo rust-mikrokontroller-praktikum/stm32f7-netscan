@@ -1,15 +1,15 @@
 use alloc::string::String;
 use smoltcp::wire::Ipv4Address;
 
-pub enum Cidr {
-    Ipv4Cidr,
-    // Ipv6Cidr,
-}
+// pub enum Cidr {
+//     Ipv4Cidr,
+//     Ipv6Cidr,
+// }
 
-pub enum IpAddr {
-    Ipv4Addr,
-    // Ipv6Addr,
-}
+// pub enum IpAddr {
+//     Ipv4Addr,
+//     Ipv6Addr,
+// }
 
 type Ipv4Addr = u32;
 // type Ipv6Addr = u128;
@@ -32,7 +32,7 @@ pub struct Ipv4Cidr {
     first_addr: Ipv4Addr,
     last_addr: Ipv4Addr,
     pub addr: Ipv4Addr,
-    netmask: u8,
+    pub netmask: u8,
 }
 
 // pub struct Ipv6Cidr {
@@ -42,15 +42,15 @@ pub struct Ipv4Cidr {
 //     netmask: u8,
 // }
 
-impl Iterator for Cidr {
-    type Item = Cidr;
-    fn next(&mut self) -> Option<Self::Item> {
-        match *self {
-            Cidr::Ipv4Cidr => self.next(),
-            // Cidr::Ipv6Cidr => self.next(),
-        }
-    }
-}
+// impl Iterator for Cidr {
+//     type Item = Cidr;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         match *self {
+//             Cidr::Ipv4Cidr => self.next(),
+//             // Cidr::Ipv6Cidr => self.next(),
+//         }
+//     }
+// }
 
 // impl Cidr {
 // }
@@ -103,7 +103,7 @@ impl Ipv4Cidr {
             addr: addr,
             netmask: netmask,
         };
-        println!("first_addr: {}, last_addr: {}", res.first_addr.to_string(), res.last_addr.to_string());
+        // println!("first_addr: {}, last_addr: {}", res.first_addr.to_string(), res.last_addr.to_string());
         Ok(res)
     }
 

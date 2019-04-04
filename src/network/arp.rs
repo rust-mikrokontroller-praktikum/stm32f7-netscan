@@ -47,18 +47,6 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
     }
     let mut tries = 0;
     loop {
-        // match iface.rx.receive(|frame| {
-        //     match process_arp(eth_addr, &frame) {
-        //         Ok(x) => {
-        //             return Ok(x);
-        //         },
-        //         Err(x) => return Err(x),
-        //     };}) {
-        //     Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => found_addrs.push(ArpResponse(source_protocol_addr, source_hardware_addr)),
-        //     Ok(_) => {},
-        //     Err(e) => println!("{:?}", e),
-        // };
-        // }
         let (rx_token, _) = match iface.receive() {
             None => {
                 if tries > 100 {

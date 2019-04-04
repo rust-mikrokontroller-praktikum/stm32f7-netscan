@@ -34,17 +34,22 @@ pub fn scan_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, De
     }
 
     iface.update_ip_addrs(|addrs| {
-        let addr = IpAddress::from(cidr::to_ipv4_address(cidr.addr));
+        let addr = IpAddress::from(Ipv4Address::new(192, 168, 1, 1));
         *addrs = ManagedSlice::from(vec![IpCidr::new(addr, cidr.netmask); 1]);
     });
 
-    cidr.reset();
-    for addr in cidr {
-        let address = cidr::to_ipv4_address(addr);
-        if probe_v4(iface, rng, sockets, icmp_handle, address) {
-            found_addrs.push(address);
-        }
+    // arp::request(iface, iface.ethernet_addr(), Ipv4Address::new(192, 168, 1, 200));
+    if probe_v4(iface, rng, sockets, icmp_handle, Ipv4Address::new(192, 168, 1, 200)) {
+        found_addrs.push(Ipv4Address::new(192, 168, 1, 200));
     }
+
+    // cidr.reset();
+    // for addr in cidr {
+    //     let address = cidr::to_ipv4_address(addr);
+    //     if probe_v4(iface, rng, sockets, icmp_handle, address) {
+    //         found_addrs.push(address);
+    //     }
+    // }
 
     iface.update_ip_addrs(|addrs| {
         *addrs = ManagedSlice::from([IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)]);
@@ -79,7 +84,7 @@ pub fn probe_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, D
             }
 
             let can_send = socket.can_send();
-            println!("can_send: {}, seq_no: {}, {}", can_send, seq_no, send_at <= timestamp);
+            // println!("can_send: {}, seq_no: {}, {}", can_send, seq_no, send_at <= timestamp);
             if can_send && seq_no < 4 as u16 && send_at <= timestamp {
                 NetworkEndian::write_i64(&mut echo_payload, timestamp.total_millis());
 
@@ -106,12 +111,14 @@ pub fn probe_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, D
 
                 if let Icmpv4Repr::EchoReply {ident, .. } = repr {
                     if ident == gident {
+                        println!("Found address: {}", addr);
                         return true;
                     }
                 }
             }
 
-            if seq_no == 4 as u16 && timestamp - Duration::from_millis(50) > start {
+            // println!("timestamp: {}, start: {}", timestamp, start);
+            if seq_no != 0 && seq_no == 4 as u16 || timestamp - Duration::from_millis(500) > start {
                 return false;
             }
             system_clock::wait_ms(10);

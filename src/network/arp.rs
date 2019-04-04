@@ -11,6 +11,35 @@ use super::cidr;
 
 pub struct ArpResponse(Ipv4Address, EthernetAddress);
 
+pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4Address) -> Result<(), String> {
+    let mut arp_req = ArpRepr::EthernetIpv4 {
+        operation: ArpOperation::Request,
+        source_hardware_addr: eth_addr,
+        source_protocol_addr: Ipv4Address::new(0, 0, 0, 0),
+        target_hardware_addr: EthernetAddress::BROADCAST,
+        target_protocol_addr: addr
+    };
+
+    let mut buffer = vec![0; arp_req.buffer_len()];
+    let mut packet = ArpPacket::new_unchecked(&mut buffer);
+    arp_req.emit(&mut packet);
+
+    let tx_token = match iface.transmit() {
+        Some(x) => x,
+        None => return Err(String::from("No tx descriptor available")),
+    };
+    match dispatch_ethernet(eth_addr, tx_token, Instant::from_millis(system_clock::ms() as i64), arp_req.buffer_len(), |mut frame| {
+        frame.set_dst_addr(EthernetAddress::BROADCAST);
+        frame.set_ethertype(EthernetProtocol::Arp);
+
+        let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
+        arp_req.emit(&mut packet);
+    }) {
+        Ok(x) => Ok(x),
+        Err(x) => return Err(x.to_string()),
+    }
+}
+
 pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, cidr: &mut cidr::Ipv4Cidr) -> Result<Vec<ArpResponse>, String> {
     let mut found_addrs = Vec::<ArpResponse>::new();
     let mut arp_req = ArpRepr::EthernetIpv4 {
@@ -50,11 +79,11 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
         let (rx_token, _) = match iface.receive() {
             None => {
                 if tries > 100 {
-                    println!("Didn't receive answers to ARP");
+                    // println!("Didn't receive answers to ARP");
                     break;
                 }
                 tries += 1;
-                system_clock::wait_ms(100);
+                // system_clock::wait_ms(100);
                 continue
             },
             Some(tokens) => tokens,

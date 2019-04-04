@@ -29,7 +29,7 @@ use cortex_m::{asm, interrupt, peripheral::NVIC};
 use rt::{entry, exception, ExceptionFrame};
 use sh::hio::{self, HStdout};
 use smoltcp::{
-    dhcp::Dhcpv4Client,
+    // dhcp::Dhcpv4Client,
     socket::{
         Socket, SocketSet, TcpSocket, TcpSocketBuffer,
         UdpPacketMetadata, UdpSocket, UdpSocketBuffer,
@@ -189,30 +189,26 @@ fn main() -> ! {
         &mut ethernet_mac,
         &mut ethernet_dma,
         ETH_ADDR,
-    )
-    .map(|device| {
-        let iface = device.into_interface();
-        let prev_ip_addr = iface.ipv4_addr().unwrap();
-        (iface, prev_ip_addr)
-    });
-    if let Err(e) = ethernet_interface {
-        println!("ethernet init failed: {:?}", e);
+    );
+    // .map(|device| {
+    //     let iface = device.into_interface();
+    //     let prev_ip_addr = iface.ipv4_addr().unwrap();
+    //     (iface, prev_ip_addr)
+    // });
+    // if let Err(e) = ethernet_interface {
+    //     println!("ethernet init failed: {:?}", e);
+    // };
+
+    let mut raw_iface = match ethernet_interface {
+        Ok(iface) => iface,
+        Err(e) => {
+            // FIXME: Don't panic, just retry later.
+            panic!("ethernet init failed: {:?}", e);
+        },
     };
 
-    let mut sockets = SocketSet::new(Vec::new());
-    if let Ok((ref mut iface, _)) = ethernet_interface {
-        let icmp_neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-            Ok(mut c) => {
-                println!("Sending ICMPv4 probes");
-                network::icmp::scan_v4(iface, &mut sockets, &mut rng, &mut c);
-            },
-            Err(x) => {
-                panic!("{}", x);
-            },
-        };
-        println!("Icmp Neighbors: {:?}", icmp_neighbors);
-    };
-
+    // println!("Arp probe");
+    network::arp::request(&mut raw_iface, ETH_ADDR, Ipv4Address::new(192, 168, 1, 200));
     // let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
     //     Ok(mut c) => {
     //         match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
@@ -227,10 +223,25 @@ fn main() -> ! {
     //     },
     // };
 
-    // println!("Neighbors: {:?}", neighbors);
 
-    // let mut iface = raw_iface.into_interface();
+    let mut iface = raw_iface.into_interface();
     // let prev_ip_addr = iface.ipv4_addr().unwrap();
+
+    let mut sockets = SocketSet::new(Vec::new());
+    // if let Ok((ref mut iface, _)) = ethernet_interface {
+        let icmp_neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+            Ok(mut c) => {
+                println!("Sending ICMPv4 probes");
+                network::icmp::scan_v4(&mut iface, &mut sockets, &mut rng, &mut c)
+            },
+            Err(x) => {
+                panic!("{}", x);
+            },
+        };
+        println!("Icmp Neighbors: {:?}", icmp_neighbors);
+    // };
+
+    // println!("Neighbors: {:?}", neighbors);
 
     // let mut sockets = SocketSet::new(Vec::new());
     // let dhcp_rx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);

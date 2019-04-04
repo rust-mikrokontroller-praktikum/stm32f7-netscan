@@ -208,20 +208,21 @@ fn main() -> ! {
     };
 
     // println!("Arp probe");
-    network::arp::request(&mut raw_iface, ETH_ADDR, Ipv4Address::new(192, 168, 1, 200));
-    // let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-    //     Ok(mut c) => {
-    //         match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
-    //             Ok(neigh) => neigh,
-    //             Err(x) => {
-    //                 panic!("{}", x);
-    //             },
-    //         };
-    //     },
-    //     Err(x) => {
-    //         panic!("{}", x);
-    //     },
-    // };
+    // network::arp::request(&mut raw_iface, ETH_ADDR, Ipv4Address::new(192, 168, 1, 200));
+    let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+        Ok(mut c) => {
+            match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
+                Ok(neigh) => neigh,
+                Err(x) => {
+                    panic!("{}", x);
+                },
+            }
+        },
+        Err(x) => {
+            panic!("{}", x);
+        },
+    };
+    println!("Neighbors: {:?}", neighbors);
 
 
     let mut iface = raw_iface.into_interface();
@@ -229,19 +230,17 @@ fn main() -> ! {
 
     let mut sockets = SocketSet::new(Vec::new());
     // if let Ok((ref mut iface, _)) = ethernet_interface {
-        let icmp_neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-            Ok(mut c) => {
-                println!("Sending ICMPv4 probes");
-                network::icmp::scan_v4(&mut iface, &mut sockets, &mut rng, &mut c)
-            },
-            Err(x) => {
-                panic!("{}", x);
-            },
-        };
-        println!("Icmp Neighbors: {:?}", icmp_neighbors);
+        // let icmp_neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+        //     Ok(mut c) => {
+        //         println!("Sending ICMPv4 probes");
+        //         network::icmp::scan_v4(&mut iface, &mut sockets, &mut rng, &mut c)
+        //     },
+        //     Err(x) => {
+        //         panic!("{}", x);
+        //     },
+        // };
+        // println!("Icmp Neighbors: {:?}", icmp_neighbors);
     // };
-
-    // println!("Neighbors: {:?}", neighbors);
 
     // let mut sockets = SocketSet::new(Vec::new());
     // let dhcp_rx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);

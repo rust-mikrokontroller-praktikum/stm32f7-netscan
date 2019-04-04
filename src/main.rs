@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 #![feature(alloc)]
 #![feature(alloc_error_handler)]
 #![no_std]

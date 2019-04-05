@@ -379,11 +379,19 @@ fn main() -> ! {
                             
                             for addr in iface.ip_addrs() {
                                 if let IpCidr::Ipv4(x) = addr {
-                                    scroll_text.add_line(format!("{} {}", "IP: ", x.address()));
+                                    scroll_text.add_line(format!("IPv4: {}", x.address()));
 
-                                    scroll_text.add_line(format!("{} {}", "IP: ", x.netmask()));
+                                    scroll_text.add_line(format!("Netmask: {}", x.netmask()));
                                 }
                             }
+
+                            iface.routes_mut()
+                                .update(|routes_map| {
+                                    routes_map.get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
+                                        .map(|default_route| {
+                                            scroll_text.add_line(format!("Gateway: {}", default_route.via_router));
+                                        });
+                                });
 
                             scroll_text.draw(&mut layer_1);
                         }

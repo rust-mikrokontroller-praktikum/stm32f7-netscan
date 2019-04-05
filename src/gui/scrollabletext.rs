@@ -10,6 +10,7 @@ pub struct ScrollableText {
     y_pos: usize,
     x_size: usize,
     y_size: usize,
+    title: String,
     lines_show: usize,
     lines: Vec<String>,
     lines_start: usize,
@@ -24,6 +25,7 @@ impl ScrollableText {
             y_pos: y_pos,
             x_size: x_size,
             y_size: y_size,
+            title: String::from(""),
             // TODO: y_size / font_height
             lines_show: 10,
             lines: lines,
@@ -94,6 +96,10 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
     fn get_lines_start(&mut self) -> usize{
         self.lines_start
     }
+
+    fn set_title(&mut self, title: String){
+        self.title = title;
+    }
     
     // fn run_touch_func(&mut self){
     // }
@@ -114,6 +120,31 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         let mut count_lines_show = 0;
 
         //println!("Number of lines {}", lines_split.len());
+
+        for c in self.title.chars() {
+            match c {
+                ' '..='~' => {
+                    let rendered = font8x8::BASIC_FONTS
+                        .get(c)
+                        .expect("character not found in basic font");
+                    for (y, byte) in rendered.iter().enumerate() {
+                        for (x, bit) in (0..8).enumerate() {
+                            let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
+                            let mut color = self.text_color;
+                            color.alpha = alpha;
+                            if alpha != 0{
+                                layer.print_point_color_at(temp_x_pos + x, temp_y_pos + y, color);
+                            }
+                        }
+                    }
+                }
+                _ => panic!("unprintable character"),
+            }
+            temp_x_pos += 8;
+        }
+        
+        temp_x_pos = self.x_pos;
+        temp_y_pos += 8;
 
         for line in self.lines.iter(){
             if count_lines_start < self.lines_start{

@@ -347,7 +347,7 @@ fn main() -> ! {
                                     panic!("{}", x);
                                 },
                             };
-                            // scroll_text.set_title("Neighbors");
+                            scroll_text.set_title(String::from("Neighbors"));
                             scroll_text.set_lines(neighbors.to_string_vec());
                             scroll_text.draw(&mut layer_1);
                             for neighbor in &neighbors {

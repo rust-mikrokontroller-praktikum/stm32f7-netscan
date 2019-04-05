@@ -38,4 +38,8 @@ pub trait UiElement<T: Framebuffer>: Any {
         println!("get_lines_start called for unimplemented struct");
         0
     }
+
+    fn set_title(&mut self, title: String){
+        println!("set_title called for unimplemented struct");
+    }
 }

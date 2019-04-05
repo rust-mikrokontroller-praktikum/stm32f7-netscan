@@ -87,7 +87,6 @@ fn main() -> ! {
     let mut ltdc = peripherals.LTDC;
     let mut sai_2 = peripherals.SAI2;
     let mut rng = peripherals.RNG;
-    let mut sdmmc = peripherals.SDMMC1;
     let mut syscfg = peripherals.SYSCFG;
     let mut ethernet_mac = peripherals.ETHERNET_MAC;
     let mut ethernet_dma = peripherals.ETHERNET_DMA;
@@ -256,7 +255,7 @@ fn main() -> ! {
                             );
                             ethernet_interface = match iface {
                                 Ok(iface) => {
-                                    // layer_2.clear();
+                                    layer_2.clear();
                                     Some(iface.into_interface())
                                 },
                                 Err((e, dma)) => {
@@ -305,7 +304,7 @@ fn main() -> ! {
                                         Some(gw) => { iface.routes_mut().add_default_ipv4_route(gw).unwrap(); },
                                         None => println!("DHCP Response without default route"),
                                     };
-                                    println!("DHCP Success: got address");
+                                    layer_2.clear();
                                     got_dhcp = true;
                                     break;
                                 }
@@ -367,6 +366,10 @@ fn main() -> ! {
                             // println!("Icmp Neighbors: {:?}", icmp_neighbors);
                             // scroll_text.set_title("ICMP Responses");
                             scroll_text.draw(&mut layer_1);
+                        } else if item_ref == "TCP_PROBE" {
+                            let scroll_text: &mut FUiElement = element_map
+                                .get_mut(&String::from("ScrollText")).unwrap();
+                            let mut sockets = SocketSet::new(Vec::new());
                         } else if item_ref == "ButtonInfo" {
                             let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();

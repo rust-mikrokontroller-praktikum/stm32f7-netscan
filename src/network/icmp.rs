@@ -13,7 +13,7 @@ use stm32f7_discovery::{
     random, system_clock,
 };
 
-use super::arp::ArpResponse;
+use super::arp::ArpResponses;
 
 #[derive(Debug)]
 pub struct IcmpResponse(pub Ipv4Address, pub Duration);
@@ -29,7 +29,7 @@ impl super::StringableVec for IcmpResponses {
     }
 }
 
-pub fn scan_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>, sockets: &mut SocketSet, rng: &mut random::Rng, addrs: &[ArpResponse]) -> IcmpResponses
+pub fn scan_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>, sockets: &mut SocketSet, rng: &mut random::Rng, addrs: &ArpResponses) -> IcmpResponses
     where DeviceT: for<'d> Device<'d> {
     let mut found_addrs = Vec::<IcmpResponse>::new();
     let rx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 1500]);

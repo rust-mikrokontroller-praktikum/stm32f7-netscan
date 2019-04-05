@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use alloc::collections::BTreeSet;
 use alloc::string::{String, ToString};
 use smoltcp::phy::{Device, RxToken, TxToken};
 use smoltcp::time::Instant;
@@ -9,10 +10,10 @@ use stm32f7_discovery::{
 };
 use super::cidr;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ArpResponse(pub Ipv4Address, pub EthernetAddress);
 
-pub type ArpResponses = Vec<ArpResponse>;
+pub type ArpResponses = BTreeSet<ArpResponse>;
 
 impl super::StringableVec for ArpResponses {
     fn to_string_vec(&self) -> Vec<String> {
@@ -54,7 +55,8 @@ pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4
 }
 
 pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, cidr: &mut cidr::Ipv4Cidr) -> Result<ArpResponses, String> {
-    let mut found_addrs = Vec::<ArpResponse>::new();
+    // let mut found_addrs = Vec::<ArpResponse>::new();
+    let mut found_addrs = BTreeSet::<ArpResponse>::new();
     let mut arp_req = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Request,
         source_hardware_addr: eth_addr,
@@ -101,13 +103,13 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
         };
         match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
             process_arp(eth_addr, &frame) }) {
-            Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => found_addrs.push(ArpResponse(source_protocol_addr, source_hardware_addr)),
+            Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => { found_addrs.insert(ArpResponse(source_protocol_addr, source_hardware_addr)); },
             Ok(_) => {},
             Err(::smoltcp::Error::Unrecognized) => {},
             Err(e) => println!("ARP Read Error: {:?}", e),
         };
         }
-    return Ok(found_addrs);
+    Ok(found_addrs)
 }
 
 fn dispatch_ethernet<Tx, F>(eth_addr: EthernetAddress, tx_token: Tx, timestamp: Instant,

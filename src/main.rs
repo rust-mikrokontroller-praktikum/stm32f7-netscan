@@ -29,6 +29,7 @@ use gui::uistate::UiState;
 use gui::uistates::UiStates;
 use gui::fuielement::FUiElement;
 
+use smoltcp::wire::Ipv4Cidr;
 use stm32f7_discovery::lcd::FramebufferArgb8888;
 use alloc::boxed::Box;
 use alloc::collections::btree_map::BTreeMap;
@@ -373,7 +374,17 @@ fn main() -> ! {
                         } else if item_ref == "ButtonInfo" {
                             let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
-                            scroll_text.set_lines(vec!(iface.ipv4_addr().unwrap().to_string()));
+                            
+                            scroll_text.set_lines(vec!());
+                            
+                            for addr in iface.ip_addrs() {
+                                if let IpCidr::Ipv4(x) = addr {
+                                    scroll_text.add_line(format!("{} {}", "IP: ", x.address()));
+
+                                    scroll_text.add_line(format!("{} {}", "IP: ", x.netmask()));
+                                }
+                            }
+
                             scroll_text.draw(&mut layer_1);
                         }
                     }

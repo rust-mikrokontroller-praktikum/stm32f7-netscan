@@ -10,15 +10,11 @@ use stm32f7_discovery::{
 use super::cidr;
 
 #[derive(Debug)]
-pub struct ArpResponse(Ipv4Address, EthernetAddress);
+pub struct ArpResponse(pub Ipv4Address, pub EthernetAddress);
 
 pub type ArpResponses = Vec<ArpResponse>;
 
-pub trait StringableVec {
-    fn to_string_vec(&self) -> Vec<String>;
-}
-
-impl StringableVec for ArpResponses {
+impl super::StringableVec for ArpResponses {
     fn to_string_vec(&self) -> Vec<String> {
         let mut ret: Vec<String> = Vec::new();
         for i in self.iter() {
@@ -53,7 +49,7 @@ pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4
         arp_req.emit(&mut packet);
     }) {
         Ok(x) => Ok(x),
-        Err(x) => return Err(x.to_string()),
+        Err(x) => Err(x.to_string()),
     }
 }
 
@@ -68,7 +64,7 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
     };
     cidr.reset();
     for addr in cidr {
-        if let ArpRepr::EthernetIpv4{ operation: _, source_hardware_addr: _, source_protocol_addr: _, target_hardware_addr: _, target_protocol_addr: ref mut y } = arp_req {
+        if let ArpRepr::EthernetIpv4{ target_protocol_addr: ref mut y, .. } = arp_req {
                 *y = cidr::to_ipv4_address(addr);
         }
         let mut buffer = vec![0; arp_req.buffer_len()];

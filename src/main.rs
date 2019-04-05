@@ -20,7 +20,7 @@ extern crate stm32f7_discovery;
 extern crate smoltcp;
 
 
-use network::arp::StringableVec;
+use network::StringableVec;
 
 use stm32f7_discovery::lcd::FramebufferArgb8888;
 use alloc::boxed::Box;
@@ -182,6 +182,7 @@ fn main() -> ! {
 
     let mut raw_iface = match ethernet_interface {
         Ok(iface) => {
+            layer_2.clear();
             iface 
         },
         Err(e) => {
@@ -190,27 +191,7 @@ fn main() -> ! {
         },
     };
 
-    layer_2.clear();
-
-    // println!("Arp probe");
-    // network::arp::request(&mut raw_iface, ETH_ADDR, Ipv4Address::new(192, 168, 1, 200));
-    // let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-    //     Ok(mut c) => {
-    //         match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
-    //             Ok(neigh) => neigh,
-    //             Err(x) => {
-    //                 panic!("{}", x);
-    //             },
-    //         }
-    //     },
-    //     Err(x) => {
-    //         panic!("{}", x);
-    //     },
-    // };
-    // println!("Neighbors: {:?}", neighbors);
-
-
-    // let mut iface = raw_iface.into_interface();
+    let mut iface = raw_iface.into_interface();
     // let prev_ip_addr = iface.ipv4_addr().unwrap();
 
     // let mut sockets = SocketSet::new(Vec::new());
@@ -313,7 +294,7 @@ fn main() -> ! {
                                 .get_mut(&String::from("ScrollText")).unwrap();
                             let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
                                 Ok(mut c) => {
-                                    match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
+                                    match network::arp::get_neighbors_v4(&mut iface.device, ETH_ADDR, &mut c) {
                                         Ok(neigh) => neigh,
                                         Err(x) => {
                                             panic!("{}", x);
@@ -324,10 +305,20 @@ fn main() -> ! {
                                     panic!("{}", x);
                                 },
                             };
+                            // scroll_text.set_title("Neighbors");
                             scroll_text.set_lines(neighbors.to_string_vec());
                             scroll_text.draw(&mut layer_1);
-                            // ScrollableText::set_lines(scroll_box, neighbors.to_string_vec());
-                            // println!("Neighbors: {:?}", neighbors.to_string());
+                            for neighbor in &neighbors {
+                                iface.inner.neighbor_cache.fill(neighbor.0.into(), neighbor.1, Instant::from_millis(system_clock::ms() as i64));
+                            }
+                            let mut sockets = SocketSet::new(Vec::new());
+                            network::set_ip4_address(&mut iface, Ipv4Address::new(192, 168, 1, 1), 24);
+                            let icmp_neighbors = network::icmp::scan_v4(&mut iface, &mut sockets, &mut rng, &neighbors);
+                            network::set_ip4_address(&mut iface, Ipv4Address::UNSPECIFIED, 0);
+                            // println!("Icmp Neighbors: {:?}", icmp_neighbors);
+                            // scroll_text.set_title("ICMP Responses");
+                            scroll_text.set_lines(icmp_neighbors.to_string_vec());
+                            scroll_text.draw(&mut layer_1);
                         }
                         // else {
                         //     item.run_touch_func();

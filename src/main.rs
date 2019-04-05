@@ -285,11 +285,11 @@ fn main() -> ! {
                         && touch_y <= (item.get_y_pos() + item.get_y_size())
                     {
                         //println!("Touched Button");
-                        if item.get_name() == "ButtonStart"{
+                        if item_ref == "ButtonStart"{
                             new_ui_state = UiStates::Start;
-                        } else if item.get_name() == "ButtonInfo"{
+                        } else if item_ref == "ButtonInfo"{
                             new_ui_state = UiStates::Info;
-                        } else if item.get_name() == "ARP_SCAN" {
+                        } else if item_ref == "ARP_SCAN" {
                             let scroll_text: &mut FUiElement = element_map
                                 .get_mut(&String::from("ScrollText")).unwrap();
                             let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
@@ -508,21 +508,21 @@ fn panic(info: &PanicInfo) -> ! {
 
 
 trait UiElement<T: Framebuffer>: Any {
-    //fn new(name: &'static str, x_pos: usize, y_pos: usize, x_size: usize, y_size: usize) -> Self;
-
-    fn get_name(&mut self) -> String;
     fn get_x_pos(&mut self) -> usize;
     fn get_y_pos(&mut self) -> usize;
     fn get_x_size(&mut self) -> usize;
     fn get_y_size(&mut self) -> usize;
 
-    fn set_text(&mut self, text: String);
     fn set_background_color(&mut self, color: Color);
     fn set_text_color(&mut self, color: Color);
 
     //fn run_touch_func(&mut self);
 
     fn draw(&mut self, layer: &mut Layer<T>);
+
+    fn set_text(&mut self, text: String){
+        println!("set_text called for unimplemented struct")
+    }
 
     fn set_lines(&mut self, lines: Vec<String>) {
         println!("set_lines called for unimplemented struct")
@@ -532,7 +532,6 @@ trait UiElement<T: Framebuffer>: Any {
 
 
 pub struct ButtonText {
-    name: String,
     x_pos: usize,
     y_pos: usize,
     x_size: usize,
@@ -543,7 +542,31 @@ pub struct ButtonText {
     //touch: fn()
 }
 
-// impl<'a> ButtonText<'a>{
+impl ButtonText{
+    fn new(x_pos: usize, y_pos: usize, x_size: usize, y_size: usize, text: String) -> ButtonText{
+        ButtonText{
+            x_pos: x_pos,
+            y_pos: y_pos,
+            x_size: x_size,
+            y_size: y_size,
+            text: text,
+            background_color:
+                Color {
+                    red: 0,
+                    green: 255,
+                    blue: 0,
+                    alpha: 255,
+                },
+            text_color:
+                Color {
+                    red: 255,
+                    green: 255,
+                    blue: 255,
+                    alpha: 255,
+                },
+        }
+    }
+
 //     fn newline(&mut self) {
 //         self.y_pos += 8;
 //         self.x_pos = 0;
@@ -552,13 +575,9 @@ pub struct ButtonText {
 //             self.layer.clear();
 //         }
 //     }
-// }
+}
 
 impl<T: Framebuffer> UiElement<T> for ButtonText {
-    fn get_name(&mut self) -> String{
-        self.name.clone()
-    }
-
     fn get_x_pos(&mut self) -> usize{
         self.x_pos
     }
@@ -596,12 +615,6 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
 
         for x in self.x_pos..self.x_pos+self.x_size {
             for y in self.y_pos..self.y_pos+self.y_size {
-                let color = Color {
-                                red: 0,
-                                green: 255,
-                                blue: 0,
-                                alpha: 255,
-                            };
                 layer.print_point_color_at(x, y, self.background_color);
             }
             
@@ -621,13 +634,8 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
                         .expect("character not found in basic font");
                     for (y, byte) in rendered.iter().enumerate() {
                         for (x, bit) in (0..8).enumerate() {
+                            //TODO remove alpha
                             let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
-                            let color = Color {
-                                red: 255,
-                                green: 255,
-                                blue: 255,
-                                alpha,
-                            };
                             if alpha != 0{
                                 layer.print_point_color_at(temp_x_pos + x, self.y_pos + y, self.text_color);
                             }
@@ -642,7 +650,6 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
 }
 
 pub struct ScrollableText {
-    name: String,
     x_pos: usize,
     y_pos: usize,
     x_size: usize,
@@ -655,6 +662,33 @@ pub struct ScrollableText {
 }
 
 impl ScrollableText {
+    fn new(x_pos: usize, y_pos: usize, x_size: usize, y_size: usize, lines: Vec<String>) -> ScrollableText{
+        ScrollableText{
+            x_pos: x_pos,
+            y_pos: y_pos,
+            x_size: x_size,
+            y_size: y_size,
+            // TODO: y_size / font_height
+            lines_show: 10,
+            lines: lines,
+            lines_start: 0,
+            background_color:
+                Color {
+                    red: 0,
+                    green: 255,
+                    blue: 0,
+                    alpha: 255,
+                },
+            text_color:
+                Color {
+                    red: 255,
+                    green: 255,
+                    blue: 255,
+                    alpha: 255,
+                },
+        }
+    }
+
     fn add_line(&mut self, line: String){
         self.lines.push(line);
     }
@@ -665,10 +699,6 @@ impl ScrollableText {
 }
 
 impl<T: Framebuffer> UiElement<T> for ScrollableText {
-    fn get_name(&mut self) -> String{
-        self.name.clone()
-    }
-
     fn get_x_pos(&mut self) -> usize{
         self.x_pos
     }
@@ -709,12 +739,6 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
 
         for x in self.x_pos..self.x_pos+self.x_size {
             for y in self.y_pos..self.y_pos+self.y_size {
-                let color = Color {
-                                red: 0,
-                                green: 255,
-                                blue: 0,
-                                alpha: 255,
-                            };
                 layer.print_point_color_at(x, y, self.background_color);
             }
             
@@ -791,7 +815,6 @@ impl UiState {
         draw_items.clear();
 
         elements.insert(String::from("ButtonInfo"), Box::new(ButtonText{
-                        name: String::from("ButtonInfo"),
                         x_pos: 220,
                         y_pos: 200,
                         x_size: 50,
@@ -813,10 +836,9 @@ impl UiState {
                             },
                     }));
         elements.insert(String::from("ARP_SCAN"), Box::new(ButtonText{
-                        name: String::from("ARP_SCAN"),
-                        x_pos: 300,
-                        y_pos: 200,
-                        x_size: 50,
+                        x_pos: 400,
+                        y_pos: 0,
+                        x_size: 80,
                         y_size: 50,
                         text: String::from("ARP Scan"),
                         background_color:
@@ -835,7 +857,6 @@ impl UiState {
                             },
                     })); 
         elements.insert(String::from("ScrollText"), Box::new(ScrollableText{
-                        name: String::from("ScrollText1"),
                         x_pos: 5,
                         y_pos: 5,
                         x_size: 200,
@@ -860,7 +881,6 @@ impl UiState {
                             },
                     })); 
         elements.insert(String::from("ButtonStart"), Box::new(ButtonText{
-                        name: String::from("ButtonStart"),
                         x_pos: 350,
                         y_pos: 50,
                         x_size: 50,

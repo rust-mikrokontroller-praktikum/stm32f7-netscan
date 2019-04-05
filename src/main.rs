@@ -291,6 +291,19 @@ fn main() -> ! {
                             new_ui_state = UiStates::Start;
                         } else if item_ref == "INIT_STATIC"{
                             new_ui_state = UiStates::Start;
+                        } else if item_ref == "ButtonScrollUp" {
+                            let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            let current_lines_start = scroll_text.get_lines_start();
+                            
+                            if current_lines_start > 0{
+                                scroll_text.set_lines_start(current_lines_start - 1);
+                                scroll_text.draw(&mut layer_1);
+                            }
+                        } else if item_ref == "ButtonScrollDown" {
+                            let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            let current_lines_start = scroll_text.get_lines_start();
+                            scroll_text.set_lines_start(current_lines_start + 1);
+                            scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ARP_SCAN" {
                             let scroll_text: &mut FUiElement = element_map
                                 .get_mut(&String::from("ScrollText")).unwrap();
@@ -530,6 +543,19 @@ trait UiElement<T: Framebuffer>: Any {
         println!("set_lines called for unimplemented struct")
     }
 
+    fn add_line(&mut self, line: String){
+        println!("add_line called for unimplemented struct")
+    }
+
+    fn set_lines_start(&mut self, lines_start: usize) {
+        println!("set_lines_start called for unimplemented struct")
+    }
+
+    fn get_lines_start(&mut self) -> usize{
+        println!("get_lines_start called for unimplemented struct");
+        0
+    }
+
 }
 
 
@@ -690,18 +716,6 @@ impl ScrollableText {
                 },
         }
     }
-
-    fn add_line(&mut self, line: String){
-        self.lines.push(line);
-    }
-
-    fn set_lines_start(&mut self, lines_start: usize) {
-        self.lines_start = lines_start;
-    }
-
-    fn get_lines_start(&mut self) -> usize{
-        self.lines_start
-    }
 }
 
 impl<T: Framebuffer> UiElement<T> for ScrollableText {
@@ -735,6 +749,22 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
 
     fn set_text_color(&mut self, color: Color){
         self.text_color = color;
+    }
+
+    fn add_line(&mut self, line: String){
+        self.lines.push(line);
+    }
+
+    fn set_lines_start(&mut self, lines_start: usize) {
+        if lines_start < 0{
+            println!("lines_start < 0");
+        } else {
+            self.lines_start = lines_start;
+        }
+    }
+
+    fn get_lines_start(&mut self) -> usize{
+        self.lines_start
     }
     
     // fn run_touch_func(&mut self){

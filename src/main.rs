@@ -360,6 +360,10 @@ fn main() -> ! {
                             // println!("Icmp Neighbors: {:?}", icmp_neighbors);
                             // scroll_text.set_title("ICMP Responses");
                             scroll_text.draw(&mut layer_1);
+                        } else if item_ref == "ButtonInfo" {
+                            let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            scroll_text.set_lines(vec!(String::from("No Info")));
+                            scroll_text.draw(&mut layer_1);
                         }
                     }
                 }

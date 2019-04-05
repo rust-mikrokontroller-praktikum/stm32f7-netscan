@@ -48,7 +48,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "core"
 version = "0.1.0"
-source = "git+https://github.com/rust-mikrokontroller-praktikum/stm32f7-discovery.git?branch=broadcast#38fc175a0f31203a57bbd645894f9cca37ef397c"
+source = "git+https://github.com/rust-mikrokontroller-praktikum/stm32f7-discovery.git?branch=broadcast#add307bc54dfadf5e6000b806ef4488e5ba7eea3"
 
 [[package]]
 name = "core"
@@ -332,7 +332,7 @@ dependencies = [
 [[package]]
 name = "stm32f7-discovery"
 version = "0.1.0"
-source = "git+https://github.com/rust-mikrokontroller-praktikum/stm32f7-discovery.git?branch=broadcast#38fc175a0f31203a57bbd645894f9cca37ef397c"
+source = "git+https://github.com/rust-mikrokontroller-praktikum/stm32f7-discovery.git?branch=broadcast#add307bc54dfadf5e6000b806ef4488e5ba7eea3"
 dependencies = [
  "alloc-cortex-m 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "arrayvec 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",

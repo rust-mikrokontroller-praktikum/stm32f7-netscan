@@ -92,25 +92,19 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
         let (rx_token, _) = match iface.receive() {
             None => {
                 if tries > 100 {
-                    // println!("Didn't receive answers to ARP");
                     break;
                 }
                 tries += 1;
-                // system_clock::wait_ms(100);
                 continue
             },
             Some(tokens) => tokens,
         };
         match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
-            match process_arp(eth_addr, &frame) {
-                Ok(x) => {
-                    return Ok(x);
-                },
-                Err(x) => return Err(x),
-            };}) {
+            process_arp(eth_addr, &frame) }) {
             Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => found_addrs.push(ArpResponse(source_protocol_addr, source_hardware_addr)),
             Ok(_) => {},
-            Err(e) => println!("{:?}", e),
+            Err(::smoltcp::Error::Unrecognized) => {},
+            Err(e) => println!("ARP Read Error: {:?}", e),
         };
         }
     return Ok(found_addrs);

@@ -36,14 +36,16 @@ use core::fmt::Write;
 use core::panic::PanicInfo;
 use cortex_m::{asm, interrupt, peripheral::NVIC};
 use rt::{entry, exception, ExceptionFrame};
+use managed::ManagedSlice;
 use sh::hio::{self, HStdout};
 use smoltcp::{
-    // dhcp::Dhcpv4Client,
+    dhcp::Dhcpv4Client,
+    iface::{EthernetInterface, Route},
     socket::{
         Socket, SocketSet, TcpSocket, TcpSocketBuffer,
         UdpPacketMetadata, UdpSocket, UdpSocketBuffer,
     },
-    time::Instant,
+    time::{Duration, Instant},
     wire::{EthernetAddress, IpCidr, IpEndpoint, Ipv4Address},
 };
 use stm32f7::stm32f7x6::{CorePeripherals, Interrupt, Peripherals};
@@ -82,6 +84,7 @@ fn main() -> ! {
     let mut syscfg = peripherals.SYSCFG;
     let mut ethernet_mac = peripherals.ETHERNET_MAC;
     let mut ethernet_dma = peripherals.ETHERNET_DMA;
+    let mut ethernet_dma = Some(&mut ethernet_dma);
 
     init::init_system_clock_216mhz(&mut rcc, &mut pwr, &mut flash);
     init::enable_gpio_ports(&mut rcc);
@@ -133,8 +136,6 @@ fn main() -> ! {
 
     nvic.enable(Interrupt::EXTI0);
 
-    let mut sd = sd::Sd::new(&mut sdmmc, &mut rcc, &pins.sdcard_present);
-
     init::init_sai_2(&mut sai_2, &mut rcc);
     init::init_wm8994(&mut i2c_3).expect("WM8994 init failed");
     // touch initialization should be done after audio initialization, because the touch
@@ -162,61 +163,10 @@ fn main() -> ! {
 
 
     // ethernet
-    let mut ethernet_interface = ethernet::EthernetDevice::new(
-        Default::default(),
-        Default::default(),
-        &mut rcc,
-        &mut syscfg,
-        &mut ethernet_mac,
-        &mut ethernet_dma,
-        ETH_ADDR,
-    );
-    // .map(|device| {
-    //     let iface = device.into_interface();
-    //     let prev_ip_addr = iface.ipv4_addr().unwrap();
-    //     (iface, prev_ip_addr)
-    // });
-    // if let Err(e) = ethernet_interface {
-    //     println!("ethernet init failed: {:?}", e);
-    // };
-
-    let mut raw_iface = match ethernet_interface {
-        Ok(iface) => {
-            layer_2.clear();
-            iface 
-        },
-        Err(e) => {
-            // FIXME: Don't panic, just retry later.
-            panic!("ethernet init failed: {:?}", e);
-        },
-    };
-
-    let mut iface = raw_iface.into_interface();
-    // let prev_ip_addr = iface.ipv4_addr().unwrap();
-
-    // let mut sockets = SocketSet::new(Vec::new());
-    // if let Ok((ref mut iface, _)) = ethernet_interface {
-        // let icmp_neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-        //     Ok(mut c) => {
-        //         println!("Sending ICMPv4 probes");
-        //         network::icmp::scan_v4(&mut iface, &mut sockets, &mut rng, &mut c)
-        //     },
-        //     Err(x) => {
-        //         panic!("{}", x);
-        //     },
-        // };
-        // println!("Icmp Neighbors: {:?}", icmp_neighbors);
-    // };
-
-    // let mut sockets = SocketSet::new(Vec::new());
-    // let dhcp_rx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);
-    // let dhcp_tx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 3000]);
-    // let mut dhcp = Dhcpv4Client::new(
-    //     &mut sockets,
-    //     dhcp_rx_buffer,
-    //     dhcp_tx_buffer,
-    //     Instant::from_millis(system_clock::ms() as i64),
-    // ).expect("could not bind udp socket");
+    // let mut ethernet_interface: Option<EthernetInterface<'b, 'c, 'e, DeviceT>> = None;
+    let mut ethernet_interface = None;
+    let mut neighbors = network::arp::ArpResponses::new();
+    let mut got_dhcp = false;
 
     let mut previous_button_state = pins.button.get();
 
@@ -287,10 +237,79 @@ fn main() -> ! {
                         //println!("Touched Button");
                         if item_ref == "INIT_ETHERNET"{
                             new_ui_state = UiStates::Address;
-                        } else if item_ref == "INIT_DHCP"{
+                            let dma = ethernet_dma.take().unwrap();
+                            let iface = ethernet::EthernetDevice::new(
+                                Default::default(),
+                                Default::default(),
+                                &mut rcc,
+                                &mut syscfg,
+                                &mut ethernet_mac,
+                                dma,
+                                ETH_ADDR,
+                            );
+                            ethernet_interface = match iface {
+                                Ok(iface) => {
+                                    // layer_2.clear();
+                                    Some(iface.into_interface())
+                                },
+                                Err((e, dma)) => {
+                                    let scroll_text: &mut FUiElement =
+                                        element_map.get_mut(&String::from("ScrollText")).unwrap();
+                                    scroll_text.set_lines(vec!(format!("ethernet init failed: {:?}", e); 1));
+                                    scroll_text.draw(&mut layer_1);
+                                    ethernet_dma = Some(dma);
+                                    None
+                                },
+                            };
+                        } else if item_ref == "INIT_DHCP" && !got_dhcp {
                             new_ui_state = UiStates::Start;
-                        } else if item_ref == "INIT_STATIC"{
+                            let mut sockets = SocketSet::new(Vec::new());
+                            let dhcp_rx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);
+                            let dhcp_tx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 3000]);
+                            let mut dhcp = Dhcpv4Client::new(&mut sockets, dhcp_rx_buffer, dhcp_tx_buffer,
+                                Instant::from_millis(system_clock::ms() as i64)).expect("could not bind udp socket");
+                            let start_timestamp = Instant::from_millis(system_clock::ms() as i64);
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            while !got_dhcp {
+                                let timestamp = Instant::from_millis(system_clock::ms() as i64);
+                                match iface.poll(&mut sockets, timestamp) {
+                                    Err(::smoltcp::Error::Exhausted) => {
+                                        continue;
+                                    }
+                                    Err(::smoltcp::Error::Unrecognized) => print!("U"),
+                                    Err(e) => println!("Network error: {:?}", e),
+                                    Ok(socket_changed) => {
+                                        if socket_changed {
+                                            for mut socket in sockets.iter_mut() {
+                                                poll_socket(&mut socket).expect("socket poll failed");
+                                            }
+                                        }
+                                    }
+                                }
+
+                                let config = dhcp.poll(iface, &mut sockets, timestamp)
+                                    .unwrap_or_else(|e| { println!("DHCP: {:?}", e); None});
+                                if let Some(x) = config {
+                                    match x.address {
+                                        Some(addr) => iface.update_ip_addrs(|addrs| { *addrs = ManagedSlice::from(vec![addr.into(); 1]); }),
+                                        None => println!("DHCP Response without address"),
+                                    };
+                                    match x.router {
+                                        Some(gw) => { iface.routes_mut().add_default_ipv4_route(gw).unwrap(); },
+                                        None => println!("DHCP Response without default route"),
+                                    };
+                                    println!("DHCP Success: got address");
+                                    got_dhcp = true;
+                                    break;
+                                }
+                                if !got_dhcp && timestamp - Duration::from_secs(5) > start_timestamp {
+                                    println!("DHCP Failed: no valid response");
+                                    break;
+                                }
+                            }
+                        } else if item_ref == "INIT_STATIC" {
                             new_ui_state = UiStates::Start;
+                            network::set_ip4_address(&mut ethernet_interface.as_mut().unwrap(), Ipv4Address::new(192, 168, 1, 1), 24);
                         } else if item_ref == "ButtonScrollUp" {
                             let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let current_lines_start = scroll_text.get_lines_start();
@@ -307,7 +326,8 @@ fn main() -> ! {
                         } else if item_ref == "ARP_SCAN" {
                             let scroll_text: &mut FUiElement = element_map
                                 .get_mut(&String::from("ScrollText")).unwrap();
-                            let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
                                 Ok(mut c) => {
                                     match network::arp::get_neighbors_v4(&mut iface.device, ETH_ADDR, &mut c) {
                                         Ok(neigh) => neigh,
@@ -326,20 +346,22 @@ fn main() -> ! {
                             for neighbor in &neighbors {
                                 iface.inner.neighbor_cache.fill(neighbor.0.into(), neighbor.1, Instant::from_millis(system_clock::ms() as i64));
                             }
+                        } else if item_ref == "ICMP" {
+                            let scroll_text: &mut FUiElement = element_map
+                                .get_mut(&String::from("ScrollText")).unwrap();
                             let mut sockets = SocketSet::new(Vec::new());
-                            network::set_ip4_address(&mut iface, Ipv4Address::new(192, 168, 1, 1), 24);
-                            let icmp_neighbors = network::icmp::scan_v4(&mut iface, &mut sockets, &mut rng, &neighbors);
-                            network::set_ip4_address(&mut iface, Ipv4Address::UNSPECIFIED, 0);
+                            if !neighbors.is_empty() {
+                                let icmp_neighbors = network::icmp::scan_v4(&mut ethernet_interface.as_mut().unwrap(), &mut
+                                                                            sockets, &mut rng, &neighbors);
+                                scroll_text.set_lines(icmp_neighbors.to_string_vec());
+                            } else {
+                                scroll_text.set_lines(vec!(String::from("No valid neighbors to ping")));
+                            }
                             // println!("Icmp Neighbors: {:?}", icmp_neighbors);
                             // scroll_text.set_title("ICMP Responses");
-                            scroll_text.set_lines(icmp_neighbors.to_string_vec());
                             scroll_text.draw(&mut layer_1);
                         }
-                        // else {
-                        //     item.run_touch_func();
-                        // }
                     }
-                    
                 }
 
                 if new_ui_state != current_ui_state.get_ui_state(){
@@ -417,15 +439,6 @@ fn main() -> ! {
         //         .map(|sockets_timeout| timeout = sockets_timeout);
         //     // TODO await next interrupt
         // }
-
-        // Initialize the SD Card on insert and deinitialize on extract.
-        if sd.card_present() && !sd.card_initialized() {
-            if let Some(i_err) = sd::init(&mut sd).err() {
-                println!("{:?}", i_err);
-            }
-        } else if !sd.card_present() && sd.card_initialized() {
-            sd::de_init(&mut sd);
-        }
     }
 }
 

@@ -814,93 +814,13 @@ impl UiState {
         // Clear everything
         draw_items.clear();
 
-        elements.insert(String::from("ButtonInfo"), Box::new(ButtonText{
-                        x_pos: 220,
-                        y_pos: 200,
-                        x_size: 50,
-                        y_size: 50,
-                        text: String::from("Info"),
-                        background_color:
-                            Color {
-                                red: 0,
-                                green: 255,
-                                blue: 0,
-                                alpha: 255,
-                            },
-                        text_color:
-                            Color {
-                                red: 255,
-                                green: 255,
-                                blue: 255,
-                                alpha: 255,
-                            },
-                    }));
-        elements.insert(String::from("ARP_SCAN"), Box::new(ButtonText{
-                        x_pos: 400,
-                        y_pos: 0,
-                        x_size: 80,
-                        y_size: 50,
-                        text: String::from("ARP Scan"),
-                        background_color:
-                            Color {
-                                red: 0,
-                                green: 255,
-                                blue: 0,
-                                alpha: 255,
-                            },
-                        text_color:
-                            Color {
-                                red: 255,
-                                green: 255,
-                                blue: 255,
-                                alpha: 255,
-                            },
-                    })); 
-        elements.insert(String::from("ScrollText"), Box::new(ScrollableText{
-                        x_pos: 5,
-                        y_pos: 5,
-                        x_size: 200,
-                        y_size: 250,
-                        // TODO: y_size / font_height
-                        lines_show: 10,
-                        lines: Vec::new(),
-                        lines_start: 0,
-                        background_color:
-                            Color {
-                                red: 0,
-                                green: 255,
-                                blue: 0,
-                                alpha: 255,
-                            },
-                        text_color:
-                            Color {
-                                red: 255,
-                                green: 255,
-                                blue: 255,
-                                alpha: 255,
-                            },
-                    })); 
-        elements.insert(String::from("ButtonStart"), Box::new(ButtonText{
-                        x_pos: 350,
-                        y_pos: 50,
-                        x_size: 50,
-                        y_size: 50,
-                        text: String::from("Start"),
-                        background_color:
-                            Color {
-                                red: 0,
-                                green: 255,
-                                blue: 0,
-                                alpha: 255,
-                            },
-                        text_color:
-                            Color {
-                                red: 255,
-                                green: 255,
-                                blue: 255,
-                                alpha: 255,
-                            },
-                    })); 
+        elements.insert(String::from("ButtonInfo"), Box::new(ButtonText::new(220, 200, 50, 50, String::from("Info"))));
+
+        elements.insert(String::from("ARP_SCAN"), Box::new(ButtonText::new(400, 0, 80, 50, String::from("ARP Scan"))));
+
+        elements.insert(String::from("ScrollText"), Box::new(ScrollableText::new(5, 5, 200, 250, Vec::new())));
+
+        elements.insert(String::from("ButtonStart"), Box::new(ButtonText::new(350, 50, 50, 50, String::from("Start")))); 
 
         if new_ui_state == UiStates::Start{
             draw_items.push(String::from("ButtonInfo"));

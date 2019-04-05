@@ -20,14 +20,18 @@ extern crate stm32f7_discovery;
 extern crate smoltcp;
 
 
+use network::arp::StringableVec;
+
 use stm32f7_discovery::lcd::FramebufferArgb8888;
 use alloc::boxed::Box;
+use alloc::collections::btree_map::BTreeMap;
 // use pin_utils::pin_mut;
 use alloc::vec::Vec;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc_cortex_m::CortexMHeap;
 use core::alloc::Layout as AllocLayout;
+use core::any::Any;
 use core::fmt::Write;
 use core::panic::PanicInfo;
 use cortex_m::{asm, interrupt, peripheral::NVIC};
@@ -112,7 +116,7 @@ fn main() -> ! {
     layer_1.clear();
     layer_2.clear();
 
-    lcd::init_stdout(layer_2);
+    lcd::init_stdout(lcd.layer_2().unwrap());
 
     //println!("Hello World");
 
@@ -151,9 +155,10 @@ fn main() -> ! {
 
     // Initialise the Start UI
     let mut current_ui_state = UiState{current_ui_state: UiStates::Start};
-    let mut draw_items = Vec::<Box<UiElement<FramebufferArgb8888>>>::new();
+    let mut draw_items = Vec::<String>::new();
+    let mut element_map: BTreeMap<String, FUiElement> = BTreeMap::new();
 
-    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, UiStates::Start);
+    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, &mut element_map, UiStates::Start);
 
 
     // ethernet
@@ -176,12 +181,16 @@ fn main() -> ! {
     // };
 
     let mut raw_iface = match ethernet_interface {
-        Ok(iface) => iface,
+        Ok(iface) => {
+            iface 
+        },
         Err(e) => {
             // FIXME: Don't panic, just retry later.
             panic!("ethernet init failed: {:?}", e);
         },
     };
+
+    layer_2.clear();
 
     // println!("Arp probe");
     // network::arp::request(&mut raw_iface, ETH_ADDR, Ipv4Address::new(192, 168, 1, 200));
@@ -287,7 +296,8 @@ fn main() -> ! {
 
                 let mut new_ui_state = current_ui_state.get_ui_state();
 
-                for item in &mut draw_items {
+                for item_ref in &mut draw_items {
+                    let item = element_map.get_mut(item_ref).unwrap();
                     if touch_x >= item.get_x_pos()
                         && touch_x <= (item.get_x_pos() + item.get_x_size())
                         && touch_y >= item.get_y_pos()
@@ -299,6 +309,8 @@ fn main() -> ! {
                         } else if item.get_name() == "ButtonInfo"{
                             new_ui_state = UiStates::Info;
                         } else if item.get_name() == "ARP_SCAN" {
+                            let scroll_text: &mut FUiElement = element_map
+                                .get_mut(&String::from("ScrollText")).unwrap();
                             let neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
                                 Ok(mut c) => {
                                     match network::arp::get_neighbors_v4(&mut raw_iface, ETH_ADDR, &mut c) {
@@ -312,7 +324,10 @@ fn main() -> ! {
                                     panic!("{}", x);
                                 },
                             };
-                            println!("Neighbors: {:?}", neighbors);
+                            scroll_text.set_lines(neighbors.to_string_vec());
+                            scroll_text.draw(&mut layer_1);
+                            // ScrollableText::set_lines(scroll_box, neighbors.to_string_vec());
+                            // println!("Neighbors: {:?}", neighbors.to_string());
                         }
                         // else {
                         //     item.run_touch_func();
@@ -322,7 +337,7 @@ fn main() -> ! {
                 }
 
                 if new_ui_state != current_ui_state.get_ui_state(){
-                    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, new_ui_state);
+                    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, &mut element_map, new_ui_state);
                 }
             }
 
@@ -501,7 +516,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 
 
-trait UiElement<T: Framebuffer> {
+trait UiElement<T: Framebuffer>: Any {
     //fn new(name: &'static str, x_pos: usize, y_pos: usize, x_size: usize, y_size: usize) -> Self;
 
     fn get_name(&mut self) -> String;
@@ -517,6 +532,11 @@ trait UiElement<T: Framebuffer> {
     //fn run_touch_func(&mut self);
 
     fn draw(&mut self, layer: &mut Layer<T>);
+
+    fn set_lines(&mut self, lines: Vec<String>) {
+        println!("set_lines called for unimplemented struct")
+    }
+
 }
 
 
@@ -644,10 +664,6 @@ pub struct ScrollableText {
 }
 
 impl ScrollableText {
-    fn set_lines(&mut self, lines: Vec<String>){
-        self.lines = lines;
-    }
-
     fn add_line(&mut self, line: String){
         self.lines.push(line);
     }
@@ -680,6 +696,10 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
 
     fn set_text(&mut self, text: String){
         self.lines = vec!(text);
+    }
+
+    fn set_lines(&mut self, lines: Vec<String>){
+        self.lines = lines;
     }
 
     fn set_background_color(&mut self, color: Color){
@@ -767,22 +787,21 @@ struct UiState{
     current_ui_state: UiStates
 }
 
+type FUiElement = Box<UiElement<FramebufferArgb8888>>;
+
 impl UiState {
     fn get_ui_state(&mut self) -> UiStates{
         self.current_ui_state
     }
 
-    fn change_ui_state(&mut self, layer: &mut Layer<FramebufferArgb8888>, draw_items: &mut Vec<Box<UiElement<FramebufferArgb8888>>>, new_ui_state: UiStates){
+    fn change_ui_state(&mut self, layer: &mut Layer<FramebufferArgb8888>, draw_items: &mut Vec<String>, elements: &mut BTreeMap<String, FUiElement>, new_ui_state: UiStates){
 
         // Clear everything
         draw_items.clear();
 
-        if new_ui_state == UiStates::Start{
-            draw_items.push(
-                Box::new(
-                    ButtonText{
+        elements.insert(String::from("ButtonInfo"), Box::new(ButtonText{
                         name: String::from("ButtonInfo"),
-                        x_pos: 200,
+                        x_pos: 220,
                         y_pos: 200,
                         x_size: 50,
                         y_size: 50,
@@ -801,13 +820,8 @@ impl UiState {
                                 blue: 255,
                                 alpha: 255,
                             },
-                    }
-                )
-            );
-
-            draw_items.push(
-                Box::new(
-                    ButtonText{
+                    }));
+        elements.insert(String::from("ARP_SCAN"), Box::new(ButtonText{
                         name: String::from("ARP_SCAN"),
                         x_pos: 300,
                         y_pos: 200,
@@ -828,21 +842,17 @@ impl UiState {
                                 blue: 255,
                                 alpha: 255,
                             },
-                    }
-                )
-            );
-
-            draw_items.push(
-                Box::new(
-                    ScrollableText{
+                    })); 
+        elements.insert(String::from("ScrollText"), Box::new(ScrollableText{
                         name: String::from("ScrollText1"),
-                        x_pos: 50,
-                        y_pos: 50,
-                        x_size: 100,
-                        y_size: 100,
-                        lines_show: 2,
-                        lines: vec!(String::from("Test"), String::from("Test2"), String::from("Test3"), String::from("Test4")),
-                        lines_start: 1,
+                        x_pos: 5,
+                        y_pos: 5,
+                        x_size: 200,
+                        y_size: 250,
+                        // TODO: y_size / font_height
+                        lines_show: 10,
+                        lines: Vec::new(),
+                        lines_start: 0,
                         background_color:
                             Color {
                                 red: 0,
@@ -857,13 +867,8 @@ impl UiState {
                                 blue: 255,
                                 alpha: 255,
                             },
-                    }
-                )
-            );
-        } else if new_ui_state == UiStates::Info{
-            draw_items.push(
-                Box::new(
-                    ButtonText{
+                    })); 
+        elements.insert(String::from("ButtonStart"), Box::new(ButtonText{
                         name: String::from("ButtonStart"),
                         x_pos: 350,
                         y_pos: 50,
@@ -884,9 +889,14 @@ impl UiState {
                                 blue: 255,
                                 alpha: 255,
                             },
-                    }
-                )
-            );
+                    })); 
+
+        if new_ui_state == UiStates::Start{
+            draw_items.push(String::from("ButtonInfo"));
+            draw_items.push(String::from("ARP_SCAN"));
+            draw_items.push(String::from("ScrollText"));
+        } else if new_ui_state == UiStates::Info{
+            draw_items.push(String::from("ButtonStart"));
         }
 
 
@@ -894,10 +904,9 @@ impl UiState {
         layer.clear();
 
         for item in draw_items {
-            item.draw(layer);
+            elements.get_mut(item).unwrap().draw(layer);
         }
 
-        println!("Changed Ui");
         self.current_ui_state = new_ui_state;
     }
 }

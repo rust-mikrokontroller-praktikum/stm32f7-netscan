@@ -154,11 +154,11 @@ fn main() -> ! {
 
 
     // Initialise the Start UI
-    let mut current_ui_state = UiState{current_ui_state: UiStates::Start};
+    let mut current_ui_state = UiState{current_ui_state: UiStates::Initialization};
     let mut draw_items = Vec::<String>::new();
     let mut element_map: BTreeMap<String, FUiElement> = BTreeMap::new();
 
-    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, &mut element_map, UiStates::Start);
+    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, &mut element_map, UiStates::Initialization);
 
 
     // ethernet
@@ -285,10 +285,12 @@ fn main() -> ! {
                         && touch_y <= (item.get_y_pos() + item.get_y_size())
                     {
                         //println!("Touched Button");
-                        if item_ref == "ButtonStart"{
+                        if item_ref == "INIT_ETHERNET"{
+                            new_ui_state = UiStates::Address;
+                        } else if item_ref == "INIT_DHCP"{
                             new_ui_state = UiStates::Start;
-                        } else if item_ref == "ButtonInfo"{
-                            new_ui_state = UiStates::Info;
+                        } else if item_ref == "INIT_STATIC"{
+                            new_ui_state = UiStates::Start;
                         } else if item_ref == "ARP_SCAN" {
                             let scroll_text: &mut FUiElement = element_map
                                 .get_mut(&String::from("ScrollText")).unwrap();
@@ -696,6 +698,10 @@ impl ScrollableText {
     fn set_lines_start(&mut self, lines_start: usize) {
         self.lines_start = lines_start;
     }
+
+    fn get_lines_start(&mut self) -> usize{
+        self.lines_start
+    }
 }
 
 impl<T: Framebuffer> UiElement<T> for ScrollableText {
@@ -794,8 +800,9 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
 
 #[derive(Copy, Clone, PartialEq)]
 enum UiStates{
-    Start,
-    Info
+    Initialization,
+    Address,
+    Start
 }
 
 struct UiState{
@@ -814,20 +821,40 @@ impl UiState {
         // Clear everything
         draw_items.clear();
 
-        elements.insert(String::from("ButtonInfo"), Box::new(ButtonText::new(220, 200, 50, 50, String::from("Info"))));
+        //Initialization
+        elements.insert(String::from("INIT_ETHERNET"), Box::new(ButtonText::new(200, 111, 80, 50, String::from("ETH"))));
 
-        elements.insert(String::from("ARP_SCAN"), Box::new(ButtonText::new(400, 0, 80, 50, String::from("ARP Scan"))));
+        //Address
+        elements.insert(String::from("INIT_DHCP"), Box::new(ButtonText::new(155, 111, 80, 50, String::from("DHCP"))));
 
-        elements.insert(String::from("ScrollText"), Box::new(ScrollableText::new(5, 5, 200, 250, Vec::new())));
+        elements.insert(String::from("INIT_STATIC"), Box::new(ButtonText::new(245, 111, 80, 50, String::from("STATIC"))));
 
-        elements.insert(String::from("ButtonStart"), Box::new(ButtonText::new(350, 50, 50, 50, String::from("Start")))); 
+        //Start
+        elements.insert(String::from("ScrollText"), Box::new(ScrollableText::new(5, 5, 300, 262, Vec::new())));
 
-        if new_ui_state == UiStates::Start{
-            draw_items.push(String::from("ButtonInfo"));
-            draw_items.push(String::from("ARP_SCAN"));
+        elements.insert(String::from("ButtonScrollUp"), Box::new(ButtonText::new(310, 5, 80, 50, String::from("UP"))));
+
+        elements.insert(String::from("ButtonScrollDown"), Box::new(ButtonText::new(310, 60, 80, 50, String::from("DOWN"))));
+        
+        elements.insert(String::from("ARP_SCAN"), Box::new(ButtonText::new(395, 5, 80, 50, String::from("ARP"))));
+
+        elements.insert(String::from("ICMP"), Box::new(ButtonText::new(395, 60, 80, 50, String::from("ICMP"))));
+
+        //elements.insert(String::from("ButtonHome"), Box::new(ButtonText::new(400, 222, 80, 50, String::from("HOME"))));
+
+        if new_ui_state == UiStates::Initialization{
+            draw_items.push(String::from("INIT_ETHERNET"));
+        } else if new_ui_state == UiStates::Address{
+            draw_items.push(String::from("INIT_DHCP"));
+            draw_items.push(String::from("INIT_STATIC"));
+        } else if new_ui_state == UiStates::Start{
             draw_items.push(String::from("ScrollText"));
-        } else if new_ui_state == UiStates::Info{
-            draw_items.push(String::from("ButtonStart"));
+
+            draw_items.push(String::from("ButtonScrollUp"));
+            draw_items.push(String::from("ButtonScrollDown"));
+
+            draw_items.push(String::from("ARP_SCAN"));
+            draw_items.push(String::from("ICMP"));
         }
 
 

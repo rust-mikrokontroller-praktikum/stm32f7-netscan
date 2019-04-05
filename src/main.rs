@@ -369,7 +369,8 @@ fn main() -> ! {
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ButtonInfo" {
                             let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
-                            scroll_text.set_lines(vec!(String::from("No Info")));
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            scroll_text.set_lines(vec!(iface.ipv4_addr().unwrap().to_string()));
                             scroll_text.draw(&mut layer_1);
                         }
                     }

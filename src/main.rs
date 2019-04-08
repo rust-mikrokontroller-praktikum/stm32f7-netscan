@@ -504,8 +504,8 @@ fn main() -> ! {
                                 attack_gateway_v4_active = true;
                             } else {
                                 button_kill.set_background_color(Color {
-                                    red: 255,
-                                    green: 165,
+                                    red: 0,
+                                    green: 255,
                                     blue: 0,
                                     alpha: 255,
                                 });
@@ -537,20 +537,57 @@ fn main() -> ! {
         }
 
         if attack_gateway_v4_active && system_clock::ticks() % 100 == 0 {
-            let scroll_text: &mut FUiElement =
-                element_map.get_mut(&String::from("ScrollText")).unwrap();
+
             if !neighbors.is_empty() {
+                let kill_button: &mut FUiElement =
+                element_map.get_mut(&String::from("ButtonKill")).unwrap();
+
+                // Button Animation
+                if system_clock::ticks() % 200 == 0{
+                    kill_button.set_background_color(Color{
+                        red: 255,
+                        green: 0,
+                        blue: 0,
+                        alpha: 255
+                    });
+                } else {
+                    kill_button.set_background_color(Color{
+                        red: 255,
+                        green: 165,
+                        blue: 0,
+                        alpha: 255
+                    });
+                }
+
+                kill_button.draw(&mut layer_1);
+                
                 network::arp::attack_gateway_v4(
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
                     &neighbors,
                 );
-                scroll_text.add_line(String::from("Attacking Gateway"));
             } else {
-                scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
-            }
+                let scroll_text: &mut FUiElement =
+                element_map.get_mut(&String::from("ScrollText")).unwrap();
 
-            scroll_text.draw(&mut layer_1);
+                scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
+                
+                scroll_text.draw(&mut layer_1);
+                
+                attack_gateway_v4_active = false;
+
+                let kill_button: &mut FUiElement =
+                element_map.get_mut(&String::from("ButtonKill")).unwrap();
+
+                kill_button.set_background_color(Color {
+                    red: 0,
+                    green: 255,
+                    blue: 0,
+                    alpha: 255,
+                });
+
+                kill_button.draw(&mut layer_1);
+            }
         }
     }
 }

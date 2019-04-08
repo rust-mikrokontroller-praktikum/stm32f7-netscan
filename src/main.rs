@@ -448,11 +448,9 @@ fn main() -> ! {
                         } else if item_ref == "ICMP" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
-                            let mut sockets = SocketSet::new(Vec::new());
                             if !neighbors.is_empty() {
                                 let alive_neighbors = network::icmp::scan_v4(
                                     &mut ethernet_interface.as_mut().unwrap(),
-                                    &mut sockets,
                                     &mut rng,
                                     &neighbors,
                                 );

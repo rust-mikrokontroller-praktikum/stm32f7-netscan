@@ -26,7 +26,6 @@ impl super::StringableVec for IcmpResponses {
 
 pub fn scan_v4<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
-    sockets: &mut SocketSet,
     rng: &mut random::Rng,
     addrs: &ArpResponses,
 ) -> IcmpResponses
@@ -37,10 +36,11 @@ where
     let rx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 1500]);
     let tx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 3000]);
     let icmp_socket = IcmpSocket::new(rx_buffer, tx_buffer);
+    let mut sockets = SocketSet::new(Vec::new());
 
     let icmp_handle = sockets.add(icmp_socket);
 
-    match iface.poll(sockets, Instant::from_millis(system_clock::ms() as i64)) {
+    match iface.poll(&mut sockets, Instant::from_millis(system_clock::ms() as i64)) {
         Ok(_) => {}
         Err(e) => {
             panic!("poll error: {}", e);
@@ -48,7 +48,7 @@ where
     }
 
     for addr in addrs {
-        if let Some(x) = probe_v4(iface, rng, sockets, icmp_handle, addr.0) {
+        if let Some(x) = probe_v4(iface, rng, &mut sockets, icmp_handle, addr.0) {
             found_addrs.push(IcmpResponse(addr.0, x));
         }
     }

@@ -59,10 +59,8 @@ where
             while socket_count > 0 {
                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
                 match iface.poll(&mut sockets, timestamp) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        panic!("poll error: {}", e);
-                    }
+                    Ok(_) => {},
+                    Err(_) => {},
                 }
                 for (done, opt) in handles.iter_mut() {
                     if *done {
@@ -71,7 +69,7 @@ where
                     if let Some(x) = opt {
                         let (stamp, handle, port) = x;
                         let mut socket = sockets.get::<TcpSocket>(*handle);
-                        if socket.is_active() {
+                        if socket.state() == TcpState::Established {
                             serv.push(port);
                             if socket.can_send() {
                                 socket.close();
@@ -90,6 +88,7 @@ where
                     }
                 }
             }
+            // sockets.prune();
         }
         ports.push(PortScan(addr.0, serv));
     }

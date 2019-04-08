@@ -54,7 +54,7 @@ impl UiState {
 
         //.set_background_color(Color{red: 255, green: 0, blue: 0, alpha: 255}
         let mut button_kill: FUiElement = Box::new(ButtonText::new(395, 217, 80, 50, String::from("KILL")));
-        button_kill.set_background_color(Color{red: 255, green: 0, blue: 0, alpha: 255});
+        button_kill.set_background_color(Color{red: 255, green: 165, blue: 0, alpha: 255});
         elements.insert(String::from("ButtonKill"), button_kill);
 
         //elements.insert(String::from("ButtonHome"), Box::new(ButtonText::new(400, 222, 80, 50, String::from("HOME"))));

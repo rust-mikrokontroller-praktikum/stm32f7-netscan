@@ -37,7 +37,11 @@ impl super::StringableVec for PortScans {
         let mut ret: Vec<String> = Vec::new();
         for i in self.iter() {
             ret.push(format!("{}:", i.0));
-            ret.extend(i.1.to_string_vec());
+            if i.1.is_empty() {
+                ret.push(String::from("    No open ports found"));
+            } else {
+                ret.extend(i.1.to_string_vec());
+            }
         }
         ret
     }

@@ -430,11 +430,7 @@ fn main() -> ! {
                                     &mut ethernet_interface.as_mut().unwrap(),
                                     &neighbors,
                                 );
-                                if ports.is_empty() {
-                                    scroll_text.add_line(String::from("No open TCP ports found"));
-                                } else {
-                                    scroll_text.set_lines(ports.to_string_vec());
-                                }
+                                scroll_text.set_lines(ports.to_string_vec());
                             } else {
                                 scroll_text.add_line(String::from(
                                     "No neighbors to probe, perform an ARP scan first"
@@ -451,11 +447,7 @@ fn main() -> ! {
                                     &mut ethernet_interface.as_mut().unwrap(),
                                     &neighbors,
                                 );
-                                if ports.is_empty() {
-                                    scroll_text.add_line(String::from("No open UDP ports found"));
-                                } else {
-                                    scroll_text.set_lines(ports.to_string_vec());
-                                }
+                                scroll_text.set_lines(ports.to_string_vec());
                             } else {
                                 scroll_text.add_line(String::from(
                                     "No neighbors to probe, perform an ARP scan first",

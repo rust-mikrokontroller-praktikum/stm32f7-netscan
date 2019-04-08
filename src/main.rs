@@ -520,6 +520,52 @@ fn main() -> ! {
     }
 }
 
+fn poll_socket(socket: &mut Socket) -> Result<(), smoltcp::Error> {
+    match socket {
+        &mut Socket::Udp(ref mut socket) => match socket.endpoint().port {
+            15 => loop {
+                let reply;
+                match socket.recv() {
+                    Ok((data, remote_endpoint)) => {
+                        let mut data = Vec::from(data);
+                        let len = data.len() - 1;
+                        data[..len].reverse();
+                        reply = (data, remote_endpoint);
+                    }
+                    Err(smoltcp::Error::Exhausted) => break,
+                    Err(err) => return Err(err),
+                }
+                socket.send_slice(&reply.0, reply.1)?;
+            },
+            _ => {}
+        },
+        &mut Socket::Tcp(ref mut socket) => match socket.local_endpoint().port {
+            15 => {
+                if !socket.may_recv() {
+                    return Ok(());
+                }
+                let reply = socket.recv(|data| {
+                    if data.len() > 0 {
+                        let mut reply = Vec::from("tcp: ");
+                        let start_index = reply.len();
+                        reply.extend_from_slice(data);
+                        reply[start_index..(start_index + data.len() - 1)].reverse();
+                        (data.len(), Some(reply))
+                    } else {
+                        (data.len(), None)
+                    }
+                })?;
+                if let Some(reply) = reply {
+                    assert_eq!(socket.send_slice(&reply)?, reply.len());
+                }
+            }
+            _ => {}
+        },
+        _ => {}
+    }
+    Ok(())
+}
+
 interrupt!(EXTI0, exti0, state: Option<HStdout> = None);
 
 fn exti0(_state: &mut Option<HStdout>) {

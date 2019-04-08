@@ -19,25 +19,17 @@ extern crate stm32f7;
 extern crate stm32f7_discovery;
 extern crate smoltcp;
 
-use gui::buttontext::ButtonText;
 use gui::fuielement::FUiElement;
-use gui::scrollabletext::ScrollableText;
-use gui::uielement::UiElement;
 use gui::uistate::UiState;
 use gui::uistates::UiStates;
 use network::StringableVec;
 
-use alloc::boxed::Box;
 use alloc::collections::btree_map::BTreeMap;
-use smoltcp::wire::Ipv4Cidr;
-use stm32f7_discovery::lcd::FramebufferArgb8888;
-// use pin_utils::pin_mut;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc_cortex_m::CortexMHeap;
 use core::alloc::Layout as AllocLayout;
-use core::any::Any;
 use core::fmt::Write;
 use core::panic::PanicInfo;
 use cortex_m::{asm, interrupt, peripheral::NVIC};
@@ -48,11 +40,10 @@ use smoltcp::{
     dhcp::Dhcpv4Client,
     iface::{EthernetInterface, Route},
     socket::{
-        Socket, SocketSet, TcpSocket, TcpSocketBuffer, UdpPacketMetadata, UdpSocket,
-        UdpSocketBuffer,
+        Socket, SocketSet, UdpPacketMetadata, UdpSocketBuffer,
     },
     time::{Duration, Instant},
-    wire::{EthernetAddress, IpCidr, IpEndpoint, Ipv4Address},
+    wire::{EthernetAddress, IpCidr, Ipv4Address},
 };
 use stm32f7::stm32f7x6::{CorePeripherals, Interrupt, Peripherals};
 use stm32f7_discovery::{
@@ -368,8 +359,6 @@ fn main() -> ! {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
-                            // neighbors = match iface.ip_addrs()[0]
-                            // if let Ok(cidr) = network::cidr::Ipv4Cidr::from_str("0.0.0.0/0") {
                             if let IpCidr::Ipv4(cidr) = iface.ip_addrs()[0] {
                                 neighbors = match network::arp::get_neighbors_v4(
                                     &mut iface.device,
@@ -512,133 +501,23 @@ fn main() -> ! {
             previous_touch_state = false;
         }
 
-        if attack_gateway_v4_active {
-            if system_clock::ticks() % 100 == 0 {
-                let scroll_text: &mut FUiElement =
-                    element_map.get_mut(&String::from("ScrollText")).unwrap();
-                if !neighbors.is_empty() {
-                    network::arp::attack_gateway_v4(
-                        &mut ethernet_interface.as_mut().unwrap(),
-                        ETH_ADDR,
-                        &neighbors,
-                    );
-                    scroll_text.add_line(String::from("Attacking Gateway"));
-                } else {
-                    scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
-                }
-
-                scroll_text.draw(&mut layer_1);
+        if attack_gateway_v4_active && system_clock::ticks() % 100 == 0 {
+            let scroll_text: &mut FUiElement =
+                element_map.get_mut(&String::from("ScrollText")).unwrap();
+            if !neighbors.is_empty() {
+                network::arp::attack_gateway_v4(
+                    &mut ethernet_interface.as_mut().unwrap(),
+                    ETH_ADDR,
+                    &neighbors,
+                );
+                scroll_text.add_line(String::from("Attacking Gateway"));
+            } else {
+                scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
             }
+
+            scroll_text.draw(&mut layer_1);
         }
-
-        // handle new ethernet packets
-        // if let Ok((ref mut iface, ref mut prev_ip_addr)) = ethernet_interface {
-        //     let timestamp = Instant::from_millis(system_clock::ms() as i64);
-        //     match iface.poll(&mut sockets, timestamp) {
-        //         Err(::smoltcp::Error::Exhausted) => {
-        //             continue;
-        //         }
-        //         Err(::smoltcp::Error::Unrecognized) => print!("U"),
-        //         Err(e) => println!("Network error: {:?}", e),
-        //         Ok(socket_changed) => {
-        //             if socket_changed {
-        //                 for mut socket in sockets.iter_mut() {
-        //                     poll_socket(&mut socket).expect("socket poll failed");
-        //                 }
-        //             }
-        //         }
-        //     }
-
-        //     let config = dhcp.poll(iface, &mut sockets, timestamp)
-        //         .unwrap_or_else(|e| { println!("DHCP: {:?}", e); None});
-        //     let ip_addr = iface.ipv4_addr().unwrap();
-        //     if ip_addr != *prev_ip_addr {
-        //         println!("\nAssigned a new IPv4 address: {}", ip_addr);
-        //         iface.routes_mut().update(|routes_map| {
-        //             routes_map
-        //                 .get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
-        //                 .map(|default_route| {
-        //                     println!("Default gateway: {}", default_route.via_router);
-        //                 });
-        //         });
-        //         for dns_server in config.iter().flat_map(|c| c.dns_servers.iter()).filter_map(|x| x.as_ref()) {
-        //             println!("DNS servers: {}", dns_server);
-        //         }
-
-        //         // TODO delete old sockets
-
-        //         // add new sockets
-        //         let endpoint = IpEndpoint::new(ip_addr.into(), 15);
-
-        //         let udp_rx_buffer =
-        //             UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY; 3], vec![0u8; 256]);
-        //         let udp_tx_buffer =
-        //             UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY; 1], vec![0u8; 128]);
-        //         let mut example_udp_socket = UdpSocket::new(udp_rx_buffer, udp_tx_buffer);
-        //         example_udp_socket.bind(endpoint).unwrap();
-        //         sockets.add(example_udp_socket);
-
-        //         let tcp_rx_buffer = TcpSocketBuffer::new(vec![0; ethernet::MTU]);
-        //         let tcp_tx_buffer = TcpSocketBuffer::new(vec![0; ethernet::MTU]);
-        //         let mut example_tcp_socket = TcpSocket::new(tcp_rx_buffer, tcp_tx_buffer);
-        //         example_tcp_socket.listen(endpoint).unwrap();
-        //         sockets.add(example_tcp_socket);
-
-        //         *prev_ip_addr = ip_addr;
-        //     }
-        //     let mut timeout = dhcp.next_poll(timestamp);
-        //     iface
-        //         .poll_delay(&sockets, timestamp)
-        //         .map(|sockets_timeout| timeout = sockets_timeout);
-        //     // TODO await next interrupt
-        // }
     }
-}
-
-fn poll_socket(socket: &mut Socket) -> Result<(), smoltcp::Error> {
-    match socket {
-        &mut Socket::Udp(ref mut socket) => match socket.endpoint().port {
-            15 => loop {
-                let reply;
-                match socket.recv() {
-                    Ok((data, remote_endpoint)) => {
-                        let mut data = Vec::from(data);
-                        let len = data.len() - 1;
-                        data[..len].reverse();
-                        reply = (data, remote_endpoint);
-                    }
-                    Err(smoltcp::Error::Exhausted) => break,
-                    Err(err) => return Err(err),
-                }
-                socket.send_slice(&reply.0, reply.1)?;
-            },
-            _ => {}
-        },
-        &mut Socket::Tcp(ref mut socket) => match socket.local_endpoint().port {
-            15 => {
-                if !socket.may_recv() {
-                    return Ok(());
-                }
-                let reply = socket.recv(|data| {
-                    if data.len() > 0 {
-                        let mut reply = Vec::from("tcp: ");
-                        let start_index = reply.len();
-                        reply.extend_from_slice(data);
-                        reply[start_index..(start_index + data.len() - 1)].reverse();
-                        (data.len(), Some(reply))
-                    } else {
-                        (data.len(), None)
-                    }
-                })?;
-                if let Some(reply) = reply {
-                    assert_eq!(socket.send_slice(&reply)?, reply.len());
-                }
-            }
-            _ => {}
-        },
-        _ => {}
-    }
-    Ok(())
 }
 
 interrupt!(EXTI0, exti0, state: Option<HStdout> = None);

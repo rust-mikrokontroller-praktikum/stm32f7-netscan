@@ -173,6 +173,7 @@ fn main() -> ! {
     // let mut ethernet_interface: Option<EthernetInterface<'b, 'c, 'e, DeviceT>> = None;
     let mut ethernet_interface = None;
     let mut neighbors = network::arp::ArpResponses::new();
+    let mut alive_neighbors = network::icmp::IcmpResponses::new();
     let mut got_dhcp = false;
 
     let mut previous_button_state = pins.button.get();
@@ -279,6 +280,7 @@ fn main() -> ! {
                                 Instant::from_millis(system_clock::ms() as i64)).expect("could not bind udp socket");
                             let start_timestamp = Instant::from_millis(system_clock::ms() as i64);
                             let iface = &mut ethernet_interface.as_mut().unwrap();
+                            println!("Requesting DHCP Address...");
                             while !got_dhcp {
                                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
                                 match iface.poll(&mut sockets, timestamp) {
@@ -357,9 +359,9 @@ fn main() -> ! {
                                 .get_mut(&String::from("ScrollText")).unwrap();
                             let mut sockets = SocketSet::new(Vec::new());
                             if !neighbors.is_empty() {
-                                let icmp_neighbors = network::icmp::scan_v4(&mut ethernet_interface.as_mut().unwrap(), &mut
+                                alive_neighbors = network::icmp::scan_v4(&mut ethernet_interface.as_mut().unwrap(), &mut
                                                                             sockets, &mut rng, &neighbors);
-                                scroll_text.set_lines(icmp_neighbors.to_string_vec());
+                                scroll_text.set_lines(alive_neighbors.to_string_vec());
                             } else {
                                 scroll_text.set_lines(vec!(String::from("No valid neighbors to ping")));
                             }
@@ -369,7 +371,17 @@ fn main() -> ! {
                         } else if item_ref == "TCP_PROBE" {
                             let scroll_text: &mut FUiElement = element_map
                                 .get_mut(&String::from("ScrollText")).unwrap();
-                            let mut sockets = SocketSet::new(Vec::new());
+                            if !alive_neighbors.is_empty() {
+                                scroll_text.set_lines(vec!(String::from("Probing live neighbors...")));
+                                scroll_text.draw(&mut layer_1);
+                                let ports = network::tcp::probe_addresses(&mut
+                                                                          ethernet_interface.as_mut().unwrap(),
+                                                                          &alive_neighbors);
+                                scroll_text.set_lines(ports.to_string_vec());
+                            } else {
+                                scroll_text.set_lines(vec!(String::from("No live neighbors to probe")));
+                            }
+                            scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ButtonInfo" {
                             let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();

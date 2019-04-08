@@ -8,6 +8,8 @@ use smoltcp::wire::{ IpAddress, Ipv4Address, IpCidr };
 pub mod arp;
 pub mod cidr;
 pub mod icmp;
+pub mod services;
+pub mod tcp;
 
 pub trait StringableVec {
     fn to_string_vec(&self) -> Vec<String>;

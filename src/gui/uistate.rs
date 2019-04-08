@@ -50,6 +50,8 @@ impl UiState {
 
         elements.insert(String::from("ICMP"), Box::new(ButtonText::new(395, 60, 80, 50, String::from("ICMP"))));
 
+        elements.insert(String::from("TCP_PROBE"), Box::new(ButtonText::new(395, 115, 80, 50, String::from("TCP PROBE"))));
+
         elements.insert(String::from("ButtonInfo"), Box::new(ButtonText::new(310, 217, 80, 50, String::from("INFO"))));
 
         //.set_background_color(Color{red: 255, green: 0, blue: 0, alpha: 255}
@@ -73,6 +75,7 @@ impl UiState {
 
             draw_items.push(String::from("ARP_SCAN"));
             draw_items.push(String::from("ICMP"));
+            draw_items.push(String::from("TCP_PROBE"));
             draw_items.push(String::from("ButtonKill"));
 
         }

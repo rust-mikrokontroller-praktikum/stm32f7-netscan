@@ -154,6 +154,11 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
                 break;
             } else {
                 for c in line.chars() {
+                    if c == '\n' {
+                        temp_y_pos += 8;
+                        temp_x_pos = self.x_pos;
+                        continue;
+                    }
                     match c {
                         ' '..='~' => {
                             let rendered = font8x8::BASIC_FONTS

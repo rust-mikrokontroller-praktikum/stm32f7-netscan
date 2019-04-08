@@ -336,24 +336,21 @@ fn main() -> ! {
                             let scroll_text: &mut FUiElement = element_map
                                 .get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
-                            neighbors = match network::cidr::Ipv4Cidr::from_str("192.168.1.0/24") {
-                                Ok(mut c) => {
-                                    match network::arp::get_neighbors_v4(&mut iface.device, ETH_ADDR, &mut c) {
-                                        Ok(neigh) => neigh,
-                                        Err(x) => {
-                                            panic!("{}", x);
-                                        },
-                                    }
-                                },
-                                Err(x) => {
-                                    panic!("{}", x);
-                                },
-                            };
-                            scroll_text.set_title(String::from("Neighbors"));
-                            scroll_text.set_lines(neighbors.to_string_vec());
-                            scroll_text.draw(&mut layer_1);
-                            for neighbor in &neighbors {
-                                iface.inner.neighbor_cache.fill(neighbor.0.into(), neighbor.1, Instant::from_millis(system_clock::ms() as i64));
+                            // neighbors = match iface.ip_addrs()[0]  
+                            if let IpCidr::Ipv4(cidr) = iface.ip_addrs()[0] {
+                                neighbors = match network::arp::get_neighbors_v4(&mut iface.device, ETH_ADDR, &mut cidr.into()) {
+                                    Ok(neigh) => neigh,
+                                    Err(x) => {
+                                        panic!("{}", x);
+                                    },
+                                };
+                                scroll_text.set_lines(neighbors.to_string_vec());
+                                scroll_text.draw(&mut layer_1);
+                                for neighbor in &neighbors {
+                                    iface.inner.neighbor_cache.fill(neighbor.0.into(), neighbor.1, Instant::from_millis(system_clock::ms() as i64));
+                                }
+                            } else {
+                                scroll_text.set_lines(vec!(String::from("No valid Ipv4 Address found")));
                             }
                         } else if item_ref == "ICMP" {
                             let scroll_text: &mut FUiElement = element_map

@@ -1,4 +1,5 @@
 use alloc::string::String;
+use byteorder::{ByteOrder, NetworkEndian};
 use smoltcp::wire::Ipv4Address;
 
 // pub enum Cidr {
@@ -64,6 +65,15 @@ impl Iterator for Ipv4Cidr {
         } else {
             None
         }
+    }
+}
+
+impl From<smoltcp::wire::Ipv4Cidr> for Ipv4Cidr {
+    fn from(t: smoltcp::wire::Ipv4Cidr) -> Self {
+        let mask = NetworkEndian::read_u32(t.netmask().as_bytes());
+        // let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
+        let addr = NetworkEndian::read_u32(t.address().as_bytes());
+        Ipv4Cidr{first_addr: addr & mask, last_addr: (addr & mask) | !mask, addr: addr, netmask: t.prefix_len() }
     }
 }
 

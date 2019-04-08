@@ -57,8 +57,8 @@ pub fn request(
             arp_req.emit(&mut packet);
         },
     ) {
-        Ok(x) => Ok(x),
-        Err(x) => Err(x.to_string()),
+        Ok(x) => {},
+        Err(x) => return Err(x.to_string()),
     };
     let mut tries = 0;
     loop {

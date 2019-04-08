@@ -344,7 +344,54 @@ fn main() -> ! {
                                     Err(e) => println!("Error during ARP request: {}", e),
                                 }
                             }
-                        } else if item_ref == "INIT_LISTEN" {
+                        } else if item_ref == "INIT_10_0_0_0" {
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            let cidr = network::cidr::Ipv4Cidr::from_str("10.0.0.0/8").unwrap();
+                            for addr in cidr {
+                                let s_addr = network::cidr::to_ipv4_address(addr);
+                                match network::arp::request(&mut iface.device, ETH_ADDR, s_addr) {
+                                    Ok(x) => {
+                                        if x {
+                                            new_ui_state = UiStates::Start;
+                                            network::set_ip4_address(iface, s_addr, 8);
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => println!("Error during ARP request: {}", e),
+                                }
+                            }
+                        } else if item_ref == "INIT_172_16_0_0" {
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            let cidr = network::cidr::Ipv4Cidr::from_str("172.16.0.0/12").unwrap();
+                            for addr in cidr {
+                                let s_addr = network::cidr::to_ipv4_address(addr);
+                                match network::arp::request(&mut iface.device, ETH_ADDR, s_addr) {
+                                    Ok(x) => {
+                                        if x {
+                                            new_ui_state = UiStates::Start;
+                                            network::set_ip4_address(iface, s_addr, 12);
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => println!("Error during ARP request: {}", e),
+                                }
+                            }
+                        } else if item_ref == "INIT_192_168_0_0" {
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            let cidr = network::cidr::Ipv4Cidr::from_str("192.168.0.0/16").unwrap();
+                            for addr in cidr {
+                                let s_addr = network::cidr::to_ipv4_address(addr);
+                                match network::arp::request(&mut iface.device, ETH_ADDR, s_addr) {
+                                    Ok(x) => {
+                                        if x {
+                                            new_ui_state = UiStates::Start;
+                                            network::set_ip4_address(iface, s_addr, 16);
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => println!("Error during ARP request: {}", e),
+                                }
+                            }
                         } else if item_ref == "ButtonScrollUp" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
@@ -368,6 +415,8 @@ fn main() -> ! {
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             if let IpCidr::Ipv4(cidr) = iface.ip_addrs()[0] {
+                                scroll_text.add_line(String::from("Scanning for neighbors via ARP solicitations..."));
+                                scroll_text.draw(&mut layer_1);
                                 neighbors = match network::arp::get_neighbors_v4(
                                     &mut iface.device,
                                     ETH_ADDR,

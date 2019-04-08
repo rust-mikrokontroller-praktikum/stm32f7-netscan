@@ -71,14 +71,18 @@ impl Iterator for Ipv4Cidr {
 impl From<smoltcp::wire::Ipv4Cidr> for Ipv4Cidr {
     fn from(t: smoltcp::wire::Ipv4Cidr) -> Self {
         let mask = NetworkEndian::read_u32(t.netmask().as_bytes());
+        // println!("mask: {:x}", mask);
         // let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
         let addr = NetworkEndian::read_u32(t.address().as_bytes());
-        Ipv4Cidr {
+        // println!("addr: {:x}", addr);
+        let res = Ipv4Cidr {
             first_addr: addr & mask,
             last_addr: (addr & mask) | !mask,
-            addr: addr,
+            addr,
             netmask: t.prefix_len(),
-        }
+        };
+        // println!("first_addr: {}, last_addr: {}", res.first_addr.to_string(), res.last_addr.to_string());
+        res
     }
 }
 
@@ -127,8 +131,8 @@ impl Ipv4Cidr {
         // let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
         let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32)
             .checked_shl((32 - netmask).into())
-            .unwrap_or(0)
-            & 0xFF_FF_FF_FF;
+            .unwrap_or(0);
+        // println!("mask: {:x}", mask);
         let res = Ipv4Cidr {
             first_addr: addr & mask,
             last_addr: (addr & mask) | !mask,

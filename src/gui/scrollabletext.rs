@@ -92,12 +92,18 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
     fn set_lines_start(&mut self, lines_start: usize) {
         if lines_start < 0 {
             println!("lines_start < 0");
+        } else if lines_start > self.lines.len() - (self.y_size/8 - 1){
+            println!("lines_start > lines.len - lines_show");
         } else {
             self.lines_start = lines_start;
         }
     }
 
-    fn get_lines_start(&mut self) -> usize {
+    fn get_lines(&mut self) -> Vec<String>{
+        self.lines.clone()
+    }
+
+    fn get_lines_start(&mut self) -> usize{
         self.lines_start
     }
 
@@ -152,7 +158,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         for line in self.lines.iter() {
             if count_lines_start < self.lines_start {
                 //println!("Skip line");
-            } else if count_lines_show >= self.lines_show {
+            } else if count_lines_show >= ((self.y_size/8)-1){
                 //println!("End line");
                 break;
             } else {
@@ -185,6 +191,13 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
                         _ => panic!("unprintable character"),
                     }
                     temp_x_pos += 8;
+
+                    if temp_x_pos >= self.x_pos + self.x_size {
+                        temp_y_pos += 8;
+                        temp_x_pos = self.x_pos;
+
+                        count_lines_show += 1;
+                    }
                 }
                 count_lines_show += 1;
 

@@ -358,8 +358,11 @@ fn main() -> ! {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let current_lines_start = scroll_text.get_lines_start();
+
+                            if scroll_text.get_lines().len() > ((scroll_text.get_y_size()/8) - 1) && current_lines_start < scroll_text.get_lines().len() - ((scroll_text.get_y_size()/8) - 1){
                             scroll_text.set_lines_start(current_lines_start + 1);
                             scroll_text.draw(&mut layer_1);
+                            }
                         } else if item_ref == "ARP_SCAN" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();

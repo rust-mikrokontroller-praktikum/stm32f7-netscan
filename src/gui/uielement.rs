@@ -1,9 +1,9 @@
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::any::Any;
 use stm32f7_discovery::lcd::Color;
 use stm32f7_discovery::lcd::Framebuffer;
 use stm32f7_discovery::lcd::Layer;
-use core::any::Any;
 
 pub trait UiElement<T: Framebuffer>: Any {
     fn get_x_pos(&mut self) -> usize;
@@ -18,7 +18,7 @@ pub trait UiElement<T: Framebuffer>: Any {
 
     fn draw(&mut self, layer: &mut Layer<T>);
 
-    fn set_text(&mut self, text: String){
+    fn set_text(&mut self, text: String) {
         println!("set_text called for unimplemented struct")
     }
 
@@ -26,7 +26,7 @@ pub trait UiElement<T: Framebuffer>: Any {
         println!("set_lines called for unimplemented struct")
     }
 
-    fn add_line(&mut self, line: String){
+    fn add_line(&mut self, line: String) {
         println!("add_line called for unimplemented struct")
     }
 
@@ -34,12 +34,12 @@ pub trait UiElement<T: Framebuffer>: Any {
         println!("set_lines_start called for unimplemented struct")
     }
 
-    fn get_lines_start(&mut self) -> usize{
+    fn get_lines_start(&mut self) -> usize {
         println!("get_lines_start called for unimplemented struct");
         0
     }
 
-    fn set_title(&mut self, title: String){
+    fn set_title(&mut self, title: String) {
         println!("set_title called for unimplemented struct");
     }
 }

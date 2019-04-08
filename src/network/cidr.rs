@@ -73,7 +73,12 @@ impl From<smoltcp::wire::Ipv4Cidr> for Ipv4Cidr {
         let mask = NetworkEndian::read_u32(t.netmask().as_bytes());
         // let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
         let addr = NetworkEndian::read_u32(t.address().as_bytes());
-        Ipv4Cidr{first_addr: addr & mask, last_addr: (addr & mask) | !mask, addr: addr, netmask: t.prefix_len() }
+        Ipv4Cidr {
+            first_addr: addr & mask,
+            last_addr: (addr & mask) | !mask,
+            addr: addr,
+            netmask: t.prefix_len(),
+        }
     }
 }
 
@@ -83,12 +88,15 @@ impl Ipv4Cidr {
     }
 
     pub fn new(first: Ipv4Addr, netmask: u8) -> Self {
-        let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32).checked_shl((32 - netmask).into()).unwrap_or(0) & 0xFF_FF_FF_FF;
+        let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32)
+            .checked_shl((32 - netmask).into())
+            .unwrap_or(0)
+            & 0xFF_FF_FF_FF;
         Ipv4Cidr {
             first_addr: first,
             last_addr: first | !mask,
             addr: first,
-            netmask
+            netmask,
         }
     }
 
@@ -113,11 +121,14 @@ impl Ipv4Cidr {
                     return Err("Ipv4 Netmask too large");
                 }
                 a
-            },
+            }
             Err(_) => return Err("Ipv4 Netmask Parse Failure"),
         };
         // let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
-        let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32).checked_shl((32 - netmask).into()).unwrap_or(0) & 0xFF_FF_FF_FF;
+        let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32)
+            .checked_shl((32 - netmask).into())
+            .unwrap_or(0)
+            & 0xFF_FF_FF_FF;
         let res = Ipv4Cidr {
             first_addr: addr & mask,
             last_addr: (addr & mask) | !mask,

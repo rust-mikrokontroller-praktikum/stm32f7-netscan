@@ -1,9 +1,9 @@
-use alloc::vec::Vec;
+use super::uielement::UiElement;
 use alloc::string::String;
+use alloc::vec::Vec;
 use stm32f7_discovery::lcd::Color;
 use stm32f7_discovery::lcd::Framebuffer;
 use stm32f7_discovery::lcd::Layer;
-use super::uielement::UiElement;
 
 pub struct ScrollableText {
     x_pos: usize,
@@ -19,8 +19,14 @@ pub struct ScrollableText {
 }
 
 impl ScrollableText {
-    pub fn new(x_pos: usize, y_pos: usize, x_size: usize, y_size: usize, lines: Vec<String>) -> ScrollableText{
-        ScrollableText{
+    pub fn new(
+        x_pos: usize,
+        y_pos: usize,
+        x_size: usize,
+        y_size: usize,
+        lines: Vec<String>,
+    ) -> ScrollableText {
+        ScrollableText {
             x_pos: x_pos,
             y_pos: y_pos,
             x_size: x_size,
@@ -30,88 +36,85 @@ impl ScrollableText {
             lines_show: 10,
             lines: lines,
             lines_start: 0,
-            background_color:
-                Color {
-                    red: 0,
-                    green: 255,
-                    blue: 0,
-                    alpha: 255,
-                },
-            text_color:
-                Color {
-                    red: 255,
-                    green: 255,
-                    blue: 255,
-                    alpha: 255,
-                },
+            background_color: Color {
+                red: 0,
+                green: 255,
+                blue: 0,
+                alpha: 255,
+            },
+            text_color: Color {
+                red: 255,
+                green: 255,
+                blue: 255,
+                alpha: 255,
+            },
         }
     }
 }
 
 impl<T: Framebuffer> UiElement<T> for ScrollableText {
-    fn get_x_pos(&mut self) -> usize{
+    fn get_x_pos(&mut self) -> usize {
         self.x_pos
     }
-    
-    fn get_y_pos(&mut self) -> usize{
+
+    fn get_y_pos(&mut self) -> usize {
         self.y_pos
     }
-    
-    fn get_x_size(&mut self) -> usize{
+
+    fn get_x_size(&mut self) -> usize {
         self.x_size
     }
-    
-    fn get_y_size(&mut self) -> usize{
+
+    fn get_y_size(&mut self) -> usize {
         self.y_size
     }
 
-    fn set_text(&mut self, text: String){
-        self.lines = vec!(text);
+    fn set_text(&mut self, text: String) {
+        self.lines = vec![text];
     }
 
-    fn set_lines(&mut self, lines: Vec<String>){
+    fn set_lines(&mut self, lines: Vec<String>) {
         self.lines = lines;
     }
 
-    fn set_background_color(&mut self, color: Color){
+    fn set_background_color(&mut self, color: Color) {
         self.background_color = color;
     }
 
-    fn set_text_color(&mut self, color: Color){
+    fn set_text_color(&mut self, color: Color) {
         self.text_color = color;
     }
 
-    fn add_line(&mut self, line: String){
+    fn add_line(&mut self, line: String) {
         self.lines.push(line);
     }
 
     fn set_lines_start(&mut self, lines_start: usize) {
-        if lines_start < 0{
+        if lines_start < 0 {
             println!("lines_start < 0");
         } else {
             self.lines_start = lines_start;
         }
     }
 
-    fn get_lines_start(&mut self) -> usize{
+    fn get_lines_start(&mut self) -> usize {
         self.lines_start
     }
 
-    fn set_title(&mut self, title: String){
+    fn set_title(&mut self, title: String) {
         self.title = title;
     }
-    
+
     // fn run_touch_func(&mut self){
     // }
 
     fn draw(&mut self, layer: &mut Layer<T>) {
         use font8x8::{self, UnicodeFonts};
 
-        for x in self.x_pos..self.x_pos+self.x_size {
-            for y in self.y_pos..self.y_pos+self.y_size {
+        for x in self.x_pos..self.x_pos + self.x_size {
+            for y in self.y_pos..self.y_pos + self.y_size {
                 layer.print_point_color_at(x, y, self.background_color);
             }
-            
         }
 
         let mut temp_x_pos = self.x_pos;
@@ -132,7 +135,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
                             let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
                             let mut color = self.text_color;
                             color.alpha = alpha;
-                            if alpha != 0{
+                            if alpha != 0 {
                                 layer.print_point_color_at(temp_x_pos + x, temp_y_pos + y, color);
                             }
                         }
@@ -142,14 +145,14 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
             }
             temp_x_pos += 8;
         }
-        
+
         temp_x_pos = self.x_pos;
         temp_y_pos += 8;
 
-        for line in self.lines.iter(){
-            if count_lines_start < self.lines_start{
+        for line in self.lines.iter() {
+            if count_lines_start < self.lines_start {
                 //println!("Skip line");
-            } else if count_lines_show >= self.lines_show{
+            } else if count_lines_show >= self.lines_show {
                 //println!("End line");
                 break;
             } else {
@@ -169,8 +172,12 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
                                     let alpha = if *byte & (1 << bit) == 0 { 0 } else { 255 };
                                     let mut color = self.text_color;
                                     color.alpha = alpha;
-                                    if alpha != 0{
-                                        layer.print_point_color_at(temp_x_pos + x, temp_y_pos + y, color);
+                                    if alpha != 0 {
+                                        layer.print_point_color_at(
+                                            temp_x_pos + x,
+                                            temp_y_pos + y,
+                                            color,
+                                        );
                                     }
                                 }
                             }
@@ -187,7 +194,5 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
             }
             count_lines_start += 1;
         }
-
-        
     }
 }

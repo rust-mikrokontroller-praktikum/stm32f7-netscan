@@ -1,12 +1,11 @@
 #![warn(clippy::all)]
-
 #![feature(alloc)]
 #![feature(alloc_error_handler)]
 #![no_std]
 #![no_main]
 
-mod network;
 mod gui;
+mod network;
 
 #[macro_use]
 extern crate alloc;
@@ -20,38 +19,37 @@ extern crate stm32f7;
 extern crate stm32f7_discovery;
 extern crate smoltcp;
 
-
-use network::StringableVec;
 use gui::buttontext::ButtonText;
+use gui::fuielement::FUiElement;
 use gui::scrollabletext::ScrollableText;
 use gui::uielement::UiElement;
 use gui::uistate::UiState;
 use gui::uistates::UiStates;
-use gui::fuielement::FUiElement;
+use network::StringableVec;
 
-use smoltcp::wire::Ipv4Cidr;
-use stm32f7_discovery::lcd::FramebufferArgb8888;
 use alloc::boxed::Box;
 use alloc::collections::btree_map::BTreeMap;
+use smoltcp::wire::Ipv4Cidr;
+use stm32f7_discovery::lcd::FramebufferArgb8888;
 // use pin_utils::pin_mut;
-use alloc::vec::Vec;
 use alloc::string::String;
 use alloc::string::ToString;
+use alloc::vec::Vec;
 use alloc_cortex_m::CortexMHeap;
 use core::alloc::Layout as AllocLayout;
 use core::any::Any;
 use core::fmt::Write;
 use core::panic::PanicInfo;
 use cortex_m::{asm, interrupt, peripheral::NVIC};
-use rt::{entry, exception, ExceptionFrame};
 use managed::ManagedSlice;
+use rt::{entry, exception, ExceptionFrame};
 use sh::hio::{self, HStdout};
 use smoltcp::{
     dhcp::Dhcpv4Client,
     iface::{EthernetInterface, Route},
     socket::{
-        Socket, SocketSet, TcpSocket, TcpSocketBuffer,
-        UdpPacketMetadata, UdpSocket, UdpSocketBuffer,
+        Socket, SocketSet, TcpSocket, TcpSocketBuffer, UdpPacketMetadata, UdpSocket,
+        UdpSocketBuffer,
     },
     time::{Duration, Instant},
     wire::{EthernetAddress, IpCidr, IpEndpoint, Ipv4Address},
@@ -160,20 +158,22 @@ fn main() -> ! {
     // }
     // println!("");
 
-
     // Initialise the Start UI
     let mut current_ui_state = UiState::new();
     let mut draw_items = Vec::<String>::new();
     let mut element_map: BTreeMap<String, FUiElement> = BTreeMap::new();
 
-    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, &mut element_map, UiStates::Initialization);
-
+    current_ui_state.change_ui_state(
+        &mut layer_1,
+        &mut draw_items,
+        &mut element_map,
+        UiStates::Initialization,
+    );
 
     // ethernet
     // let mut ethernet_interface: Option<EthernetInterface<'b, 'c, 'e, DeviceT>> = None;
     let mut ethernet_interface = None;
     let mut neighbors = network::arp::ArpResponses::new();
-    let mut alive_neighbors = network::icmp::IcmpResponses::new();
     let mut got_dhcp = false;
 
     let mut previous_button_state = pins.button.get();
@@ -229,7 +229,7 @@ fn main() -> ! {
 
             // TODO: Multitouch ist nicht mehr möglich
             // Möglicher Fix: Button finden, der gerade gedrückt wird und die Koordinaten ignorieren
-            if !previous_touch_state{
+            if !previous_touch_state {
                 previous_touch_state = true;
 
                 let touch_x = touch.x as usize;
@@ -245,8 +245,7 @@ fn main() -> ! {
                         && touch_y <= (item.get_y_pos() + item.get_y_size())
                     {
                         //println!("Touched Button");
-                        if item_ref == "INIT_ETHERNET"{
-                            new_ui_state = UiStates::Address;
+                        if item_ref == "INIT_ETHERNET" {
                             let dma = ethernet_dma.take().unwrap();
                             let iface = ethernet::EthernetDevice::new(
                                 Default::default(),
@@ -259,25 +258,29 @@ fn main() -> ! {
                             );
                             ethernet_interface = match iface {
                                 Ok(iface) => {
+                                    new_ui_state = UiStates::Address;
                                     layer_2.clear();
                                     Some(iface.into_interface())
-                                },
+                                }
                                 Err((e, dma)) => {
-                                    let scroll_text: &mut FUiElement =
-                                        element_map.get_mut(&String::from("ScrollText")).unwrap();
-                                    scroll_text.set_lines(vec!(format!("ethernet init failed: {:?}", e); 1));
-                                    scroll_text.draw(&mut layer_1);
+                                    println!("ethernet init failed: {:?}", e);
                                     ethernet_dma = Some(dma);
                                     None
-                                },
+                                }
                             };
                         } else if item_ref == "INIT_DHCP" && !got_dhcp {
-                            new_ui_state = UiStates::Start;
                             let mut sockets = SocketSet::new(Vec::new());
-                            let dhcp_rx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);
-                            let dhcp_tx_buffer = UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 3000]);
-                            let mut dhcp = Dhcpv4Client::new(&mut sockets, dhcp_rx_buffer, dhcp_tx_buffer,
-                                Instant::from_millis(system_clock::ms() as i64)).expect("could not bind udp socket");
+                            let dhcp_rx_buffer =
+                                UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 1500]);
+                            let dhcp_tx_buffer =
+                                UdpSocketBuffer::new([UdpPacketMetadata::EMPTY; 1], vec![0; 3000]);
+                            let mut dhcp = Dhcpv4Client::new(
+                                &mut sockets,
+                                dhcp_rx_buffer,
+                                dhcp_tx_buffer,
+                                Instant::from_millis(system_clock::ms() as i64),
+                            )
+                            .expect("could not bind udp socket");
                             let start_timestamp = Instant::from_millis(system_clock::ms() as i64);
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             println!("Requesting DHCP Address...");
@@ -292,28 +295,39 @@ fn main() -> ! {
                                     Ok(socket_changed) => {
                                         if socket_changed {
                                             for mut socket in sockets.iter_mut() {
-                                                poll_socket(&mut socket).expect("socket poll failed");
+                                                poll_socket(&mut socket)
+                                                    .expect("socket poll failed");
                                             }
                                         }
                                     }
                                 }
 
-                                let config = dhcp.poll(iface, &mut sockets, timestamp)
-                                    .unwrap_or_else(|e| { println!("DHCP: {:?}", e); None});
+                                let config = dhcp
+                                    .poll(iface, &mut sockets, timestamp)
+                                    .unwrap_or_else(|e| {
+                                        println!("DHCP: {:?}", e);
+                                        None
+                                    });
                                 if let Some(x) = config {
                                     match x.address {
-                                        Some(addr) => iface.update_ip_addrs(|addrs| { *addrs = ManagedSlice::from(vec![addr.into(); 1]); }),
+                                        Some(addr) => iface.update_ip_addrs(|addrs| {
+                                            *addrs = ManagedSlice::from(vec![addr.into(); 1]);
+                                        }),
                                         None => println!("DHCP Response without address"),
                                     };
                                     match x.router {
-                                        Some(gw) => { iface.routes_mut().add_default_ipv4_route(gw).unwrap(); },
+                                        Some(gw) => {
+                                            iface.routes_mut().add_default_ipv4_route(gw).unwrap();
+                                        }
                                         None => println!("DHCP Response without default route"),
                                     };
                                     layer_2.clear();
                                     got_dhcp = true;
+                                    new_ui_state = UiStates::Start;
                                     break;
                                 }
-                                if !got_dhcp && timestamp - Duration::from_secs(5) > start_timestamp {
+                                if !got_dhcp && timestamp - Duration::from_secs(5) > start_timestamp
+                                {
                                     println!("DHCP Failed: no valid response");
                                     break;
                                 }
@@ -330,36 +344,42 @@ fn main() -> ! {
                                             network::set_ip4_address(iface, s_addr, 0);
                                             break;
                                         }
-                                    },
+                                    }
                                     Err(e) => println!("Error during ARP request: {}", e),
                                 }
                             }
                         } else if item_ref == "INIT_LISTEN" {
                         } else if item_ref == "ButtonScrollUp" {
-                            let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let current_lines_start = scroll_text.get_lines_start();
-                            
-                            if current_lines_start > 0{
+
+                            if current_lines_start > 0 {
                                 scroll_text.set_lines_start(current_lines_start - 1);
                                 scroll_text.draw(&mut layer_1);
                             }
                         } else if item_ref == "ButtonScrollDown" {
-                            let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let current_lines_start = scroll_text.get_lines_start();
                             scroll_text.set_lines_start(current_lines_start + 1);
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ARP_SCAN" {
-                            let scroll_text: &mut FUiElement = element_map
-                                .get_mut(&String::from("ScrollText")).unwrap();
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
-                            // neighbors = match iface.ip_addrs()[0]  
+                            // neighbors = match iface.ip_addrs()[0]
                             // if let Ok(cidr) = network::cidr::Ipv4Cidr::from_str("0.0.0.0/0") {
                             if let IpCidr::Ipv4(cidr) = iface.ip_addrs()[0] {
-                                neighbors = match network::arp::get_neighbors_v4(&mut iface.device, ETH_ADDR, &mut cidr.into()) {
+                                neighbors = match network::arp::get_neighbors_v4(
+                                    &mut iface.device,
+                                    ETH_ADDR,
+                                    &mut cidr.into(),
+                                ) {
                                     Ok(neigh) => neigh,
                                     Err(x) => {
                                         panic!("{}", x);
-                                    },
+                                    }
                                 };
                                 if neighbors.is_empty() {
                                     scroll_text.add_line(String::from("No neighbors found"));;
@@ -368,47 +388,63 @@ fn main() -> ! {
                                 }
                                 scroll_text.draw(&mut layer_1);
                                 for neighbor in &neighbors {
-                                    iface.inner.neighbor_cache.fill(neighbor.0.into(), neighbor.1, Instant::from_millis(system_clock::ms() as i64));
+                                    iface.inner.neighbor_cache.fill(
+                                        neighbor.0.into(),
+                                        neighbor.1,
+                                        Instant::from_millis(system_clock::ms() as i64),
+                                    );
                                 }
                             } else {
-                                scroll_text.add_line(String::from("No valid Ipv4 Address found, can't find network to scan."));
+                                scroll_text.add_line(String::from(
+                                    "No valid Ipv4 Address found, can't find network to scan.",
+                                ));
                             }
                         } else if item_ref == "ICMP" {
-                            let scroll_text: &mut FUiElement = element_map
-                                .get_mut(&String::from("ScrollText")).unwrap();
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let mut sockets = SocketSet::new(Vec::new());
                             if !neighbors.is_empty() {
-                                alive_neighbors = network::icmp::scan_v4(&mut ethernet_interface.as_mut().unwrap(), &mut
-                                                                            sockets, &mut rng, &neighbors);
+                                let alive_neighbors = network::icmp::scan_v4(
+                                    &mut ethernet_interface.as_mut().unwrap(),
+                                    &mut sockets,
+                                    &mut rng,
+                                    &neighbors,
+                                );
                                 scroll_text.set_lines(alive_neighbors.to_string_vec());
                             } else {
-                                scroll_text.set_lines(vec!(String::from("No valid neighbors to ping")));
+                                scroll_text.set_lines(vec![String::from(
+                                    "No valid neighbors to ping, try performing an ARP scan",
+                                )]);
                             }
                             // println!("Icmp Neighbors: {:?}", icmp_neighbors);
                             // scroll_text.set_title("ICMP Responses");
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "TCP_PROBE" {
-                            let scroll_text: &mut FUiElement = element_map
-                                .get_mut(&String::from("ScrollText")).unwrap();
-                            if !alive_neighbors.is_empty() {
-                                scroll_text.set_lines(vec!(String::from("Probing live neighbors...")));
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            if !neighbors.is_empty() {
+                                scroll_text.set_lines(vec![String::from("Probing neighbors...")]);
                                 scroll_text.draw(&mut layer_1);
-                                let ports = network::tcp::probe_addresses(&mut
-                                                                          ethernet_interface.as_mut().unwrap(),
-                                                                          &alive_neighbors);
+                                let ports = network::tcp::probe_addresses(
+                                    &mut ethernet_interface.as_mut().unwrap(),
+                                    &neighbors,
+                                );
                                 scroll_text.set_lines(ports.to_string_vec());
                             } else {
-                                scroll_text.set_lines(vec!(String::from("No live neighbors to probe")));
+                                scroll_text.set_lines(vec![String::from(
+                                    "No neighbors to probe, perform an ARP scan first",
+                                )]);
                             }
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ButtonInfo" {
-                            let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
-                            
-                            scroll_text.set_lines(vec!());
+
+                            scroll_text.set_lines(vec![]);
 
                             scroll_text.add_line(format!("MAC: {}", ETH_ADDR.to_string()));
-                            
+
                             for addr in iface.ip_addrs() {
                                 if let IpCidr::Ipv4(x) = addr {
                                     scroll_text.add_line(format!("IPv4: {}", x.address()));
@@ -417,56 +453,78 @@ fn main() -> ! {
                                 }
                             }
 
-                            iface.routes_mut()
-                                .update(|routes_map| {
-                                    routes_map.get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
-                                        .map(|default_route| {
-                                            scroll_text.add_line(format!("Gateway: {}", default_route.via_router));
-                                        });
-                                });
+                            iface.routes_mut().update(|routes_map| {
+                                routes_map
+                                    .get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
+                                    .map(|default_route| {
+                                        scroll_text.add_line(format!(
+                                            "Gateway: {}",
+                                            default_route.via_router
+                                        ));
+                                    });
+                            });
 
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ButtonKill" {
-                            let button_kill: &mut FUiElement = element_map.get_mut(&String::from("ButtonKill")).unwrap();
+                            let button_kill: &mut FUiElement =
+                                element_map.get_mut(&String::from("ButtonKill")).unwrap();
 
-                            if !attack_gateway_v4_active{
-                                button_kill.set_background_color(Color{red: 255, green: 0, blue: 0, alpha: 255});
+                            if !attack_gateway_v4_active {
+                                button_kill.set_background_color(Color {
+                                    red: 255,
+                                    green: 0,
+                                    blue: 0,
+                                    alpha: 255,
+                                });
 
                                 attack_gateway_v4_active = true;
                             } else {
-                                button_kill.set_background_color(Color{red: 255, green: 165, blue: 0, alpha: 255});
+                                button_kill.set_background_color(Color {
+                                    red: 255,
+                                    green: 165,
+                                    blue: 0,
+                                    alpha: 255,
+                                });
 
                                 attack_gateway_v4_active = false;
                             }
-                            
+
                             button_kill.draw(&mut layer_1);
                         }
                     }
                 }
 
-                if new_ui_state != current_ui_state.get_ui_state(){
-                    current_ui_state.change_ui_state(&mut layer_1, &mut draw_items, &mut element_map, new_ui_state);
+                if new_ui_state != current_ui_state.get_ui_state() {
+                    current_ui_state.change_ui_state(
+                        &mut layer_1,
+                        &mut draw_items,
+                        &mut element_map,
+                        new_ui_state,
+                    );
                 }
             }
 
             number_of_touches += 1;
-
         }
 
-        if number_of_touches == 0{
+        if number_of_touches == 0 {
             //println!("NO TOUCH");
             previous_touch_state = false;
         }
 
-        if attack_gateway_v4_active{
+        if attack_gateway_v4_active {
             if system_clock::ticks() % 100 == 0 {
-                let scroll_text: &mut FUiElement = element_map
-                    .get_mut(&String::from("ScrollText")).unwrap();
+                let scroll_text: &mut FUiElement =
+                    element_map.get_mut(&String::from("ScrollText")).unwrap();
                 if !neighbors.is_empty() {
-                    network::arp::attack_gateway_v4(&mut ethernet_interface.as_mut().unwrap(), ETH_ADDR, &neighbors);
+                    network::arp::attack_gateway_v4(
+                        &mut ethernet_interface.as_mut().unwrap(),
+                        ETH_ADDR,
+                        &neighbors,
+                    );
                     scroll_text.add_line(String::from("Attacking Gateway"));
                 } else {
-                    scroll_text.set_lines(vec!(String::from("No valid neighbors to attack")));
+                    scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
                 }
 
                 scroll_text.draw(&mut layer_1);

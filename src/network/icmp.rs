@@ -1,17 +1,12 @@
-use alloc::vec::Vec;
 use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use byteorder::{ByteOrder, NetworkEndian};
 use smoltcp::iface::EthernetInterface;
 use smoltcp::phy::{Device, DeviceCapabilities};
 use smoltcp::socket::*;
 use smoltcp::time::{Duration, Instant};
-use smoltcp::wire::{
-    IpAddress, Ipv4Address, Icmpv4Repr, Icmpv4Packet,
-};
-use stm32f7_discovery::{
-    ethernet::MTU,
-    random, system_clock,
-};
+use smoltcp::wire::{Icmpv4Packet, Icmpv4Repr, IpAddress, Ipv4Address};
+use stm32f7_discovery::{ethernet::MTU, random, system_clock};
 
 use super::arp::ArpResponses;
 
@@ -29,8 +24,15 @@ impl super::StringableVec for IcmpResponses {
     }
 }
 
-pub fn scan_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>, sockets: &mut SocketSet, rng: &mut random::Rng, addrs: &ArpResponses) -> IcmpResponses
-    where DeviceT: for<'d> Device<'d> {
+pub fn scan_v4<'b, 'c, 'e, DeviceT>(
+    iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
+    sockets: &mut SocketSet,
+    rng: &mut random::Rng,
+    addrs: &ArpResponses,
+) -> IcmpResponses
+where
+    DeviceT: for<'d> Device<'d>,
+{
     let mut found_addrs = Vec::<IcmpResponse>::new();
     let rx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 1500]);
     let tx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 3000]);
@@ -39,10 +41,10 @@ pub fn scan_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, De
     let icmp_handle = sockets.add(icmp_socket);
 
     match iface.poll(sockets, Instant::from_millis(system_clock::ms() as i64)) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(e) => {
             panic!("poll error: {}", e);
-        },
+        }
     }
 
     for addr in addrs {
@@ -54,8 +56,16 @@ pub fn scan_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, De
     found_addrs
 }
 
-pub fn probe_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>, rng: &mut random::Rng, sockets: &mut SocketSet, handle: SocketHandle, addr: Ipv4Address) -> Option<Duration> 
-    where DeviceT: for<'d> Device<'d> {
+pub fn probe_v4<'b, 'c, 'e, DeviceT>(
+    iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
+    rng: &mut random::Rng,
+    sockets: &mut SocketSet,
+    handle: SocketHandle,
+    addr: Ipv4Address,
+) -> Option<Duration>
+where
+    DeviceT: for<'d> Device<'d>,
+{
     let start = Instant::from_millis(system_clock::ms() as i64);
     let mut send_at = Instant::from_millis(0);
     let mut seq_no = 0;
@@ -66,16 +76,16 @@ pub fn probe_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, D
     loop {
         let timestamp = Instant::from_millis(system_clock::ms() as i64);
         match iface.poll(sockets, timestamp) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 panic!("poll error: {}", e);
-            },
+            }
         }
 
         {
             let timestamp = Instant::from_millis(system_clock::ms() as i64);
             let mut socket = sockets.get::<IcmpSocket>(handle);
-            if !socket.is_open(){
+            if !socket.is_open() {
                 socket.bind(IcmpEndpoint::Ident(gident)).unwrap();
                 send_at = timestamp;
             }
@@ -90,8 +100,10 @@ pub fn probe_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, D
                     seq_no: seq_no,
                     data: &echo_payload,
                 };
-                
-                let icmp_payload = socket.send(icmp_repr.buffer_len(), IpAddress::from(addr)).unwrap();
+
+                let icmp_payload = socket
+                    .send(icmp_repr.buffer_len(), IpAddress::from(addr))
+                    .unwrap();
 
                 let mut icmp_packet = Icmpv4Packet::new_unchecked(icmp_payload);
                 icmp_repr.emit(&mut icmp_packet, &capabilities().checksum);
@@ -106,10 +118,12 @@ pub fn probe_v4<'b, 'c, 'e, DeviceT>(iface: &mut EthernetInterface<'b, 'c, 'e, D
                 let packet = Icmpv4Packet::new_checked(&payload).unwrap();
                 let repr = Icmpv4Repr::parse(&packet, &capabilities().checksum).unwrap();
 
-                if let Icmpv4Repr::EchoReply {ident, data, .. } = repr {
+                if let Icmpv4Repr::EchoReply { ident, data, .. } = repr {
                     if ident == gident {
                         // println!("Found address: {}", addr);
-                        return Some(timestamp - Instant::from_millis(NetworkEndian::read_i64(data)));
+                        return Some(
+                            timestamp - Instant::from_millis(NetworkEndian::read_i64(data)),
+                        );
                     }
                 }
             }

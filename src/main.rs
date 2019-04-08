@@ -318,9 +318,23 @@ fn main() -> ! {
                                     break;
                                 }
                             }
-                        } else if item_ref == "INIT_STATIC" {
-                            new_ui_state = UiStates::Start;
-                            network::set_ip4_address(&mut ethernet_interface.as_mut().unwrap(), Ipv4Address::new(192, 168, 1, 1), 24);
+                        } else if item_ref == "INIT_GLOBAL" {
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            let cidr = network::cidr::Ipv4Cidr::new(0x01_00_00_00, 0);
+                            for addr in cidr {
+                                let s_addr = network::cidr::to_ipv4_address(addr);
+                                match network::arp::request(&mut iface.device, ETH_ADDR, s_addr) {
+                                    Ok(x) => {
+                                        if x {
+                                            new_ui_state = UiStates::Start;
+                                            network::set_ip4_address(iface, s_addr, 0);
+                                            break;
+                                        }
+                                    },
+                                    Err(e) => println!("Error during ARP request: {}", e),
+                                }
+                            }
+                        } else if item_ref == "INIT_LISTEN" {
                         } else if item_ref == "ButtonScrollUp" {
                             let scroll_text: &mut FUiElement = element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let current_lines_start = scroll_text.get_lines_start();
@@ -339,6 +353,7 @@ fn main() -> ! {
                                 .get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             // neighbors = match iface.ip_addrs()[0]  
+                            // if let Ok(cidr) = network::cidr::Ipv4Cidr::from_str("0.0.0.0/0") {
                             if let IpCidr::Ipv4(cidr) = iface.ip_addrs()[0] {
                                 neighbors = match network::arp::get_neighbors_v4(&mut iface.device, ETH_ADDR, &mut cidr.into()) {
                                     Ok(neigh) => neigh,
@@ -346,13 +361,17 @@ fn main() -> ! {
                                         panic!("{}", x);
                                     },
                                 };
-                                scroll_text.set_lines(neighbors.to_string_vec());
+                                if neighbors.is_empty() {
+                                    scroll_text.add_line(String::from("No neighbors found"));;
+                                } else {
+                                    scroll_text.set_lines(neighbors.to_string_vec());
+                                }
                                 scroll_text.draw(&mut layer_1);
                                 for neighbor in &neighbors {
                                     iface.inner.neighbor_cache.fill(neighbor.0.into(), neighbor.1, Instant::from_millis(system_clock::ms() as i64));
                                 }
                             } else {
-                                scroll_text.set_lines(vec!(String::from("No valid Ipv4 Address found")));
+                                scroll_text.add_line(String::from("No valid Ipv4 Address found, can't find network to scan."));
                             }
                         } else if item_ref == "ICMP" {
                             let scroll_text: &mut FUiElement = element_map

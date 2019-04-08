@@ -82,6 +82,16 @@ impl Ipv4Cidr {
         return 32;
     }
 
+    pub fn new(first: Ipv4Addr, netmask: u8) -> Self {
+        let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32).checked_shl((32 - netmask).into()).unwrap_or(0) & 0xFF_FF_FF_FF;
+        Ipv4Cidr {
+            first_addr: first,
+            last_addr: first | !mask,
+            addr: first,
+            netmask
+        }
+    }
+
     pub fn from_str(s: &str) -> Result<Self, &'static str> {
         let (addr_str, mask_str) = match split_ip_netmask(s) {
             Some(parts) => parts,
@@ -106,12 +116,13 @@ impl Ipv4Cidr {
             },
             Err(_) => return Err("Ipv4 Netmask Parse Failure"),
         };
-        let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
+        // let mask: Ipv4Addr = (0xFFFFFFFF << (32 - netmask)) & 0xFFFFFFFF;
+        let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32).checked_shl((32 - netmask).into()).unwrap_or(0) & 0xFF_FF_FF_FF;
         let res = Ipv4Cidr {
             first_addr: addr & mask,
             last_addr: (addr & mask) | !mask,
-            addr: addr,
-            netmask: netmask,
+            addr,
+            netmask,
         };
         // println!("first_addr: {}, last_addr: {}", res.first_addr.to_string(), res.last_addr.to_string());
         Ok(res)

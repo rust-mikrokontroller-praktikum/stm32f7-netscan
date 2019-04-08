@@ -26,7 +26,7 @@ impl super::StringableVec for ArpResponses {
     }
 }
 
-pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4Address) -> Result<(), String> {
+pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4Address) -> Result<bool, String> {
     let mut arp_req = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Request,
         source_hardware_addr: eth_addr,
@@ -52,7 +52,28 @@ pub fn request(iface: &mut EthernetDevice, eth_addr: EthernetAddress, addr: Ipv4
     }) {
         Ok(x) => Ok(x),
         Err(x) => Err(x.to_string()),
+    };
+    let mut tries = 0;
+    loop {
+        let (rx_token, _) = match iface.receive() {
+            None => {
+                if tries > 100 {
+                    break;
+                }
+                tries += 1;
+                continue
+            },
+            Some(tokens) => tokens,
+        };
+        match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
+            process_arp(eth_addr, &frame) }) {
+            Ok(ArpRepr::EthernetIpv4{source_hardware_addr, source_protocol_addr, .. }) => { return Ok(false) },
+            Ok(_) => {},
+            Err(::smoltcp::Error::Unrecognized) => {},
+            Err(e) => println!("ARP Read Error: {:?}", e),
+        };
     }
+    Ok(true)
 }
 
 pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, cidr: &mut cidr::Ipv4Cidr) -> Result<ArpResponses, String> {
@@ -109,7 +130,7 @@ pub fn get_neighbors_v4(iface: &mut EthernetDevice, eth_addr: EthernetAddress, c
             Err(::smoltcp::Error::Unrecognized) => {},
             Err(e) => println!("ARP Read Error: {:?}", e),
         };
-        }
+    }
     Ok(found_addrs)
 }
 

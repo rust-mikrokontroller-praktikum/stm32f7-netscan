@@ -59,42 +59,47 @@ impl UiState {
         //Start
         elements.insert(
             String::from("ScrollText"),
-            Box::new(ScrollableText::new(5, 5, 300, 262, Vec::new())),
+            Box::new(ScrollableText::new(5, 1, 300, 270, Vec::new())),
         );
 
         elements.insert(
             String::from("ButtonScrollUp"),
-            Box::new(ButtonText::new(310, 5, 80, 50, String::from("UP"))),
+            Box::new(ButtonText::new(310, 1, 80, 50, String::from("UP"))),
         );
 
         elements.insert(
             String::from("ButtonScrollDown"),
-            Box::new(ButtonText::new(310, 60, 80, 50, String::from("DOWN"))),
-        );
-
-        elements.insert(
-            String::from("ARP_SCAN"),
-            Box::new(ButtonText::new(395, 5, 80, 50, String::from("ARP"))),
-        );
-
-        elements.insert(
-            String::from("ICMP"),
-            Box::new(ButtonText::new(395, 60, 80, 50, String::from("ICMP"))),
-        );
-
-        elements.insert(
-            String::from("TCP_PROBE"),
-            Box::new(ButtonText::new(395, 115, 80, 50, String::from("TCP PROBE"))),
+            Box::new(ButtonText::new(310, 56, 80, 50, String::from("DOWN"))),
         );
 
         elements.insert(
             String::from("ButtonInfo"),
-            Box::new(ButtonText::new(310, 217, 80, 50, String::from("INFO"))),
+            Box::new(ButtonText::new(310, 220, 80, 50, String::from("INFO"))),
+        );
+
+        elements.insert(
+            String::from("ARP_SCAN"),
+            Box::new(ButtonText::new(395, 1, 80, 50, String::from("ARP"))),
+        );
+
+        elements.insert(
+            String::from("ICMP"),
+            Box::new(ButtonText::new(395, 56, 80, 50, String::from("ICMP"))),
+        );
+
+        elements.insert(
+            String::from("TCP_PROBE"),
+            Box::new(ButtonText::new(395, 110, 80, 50, String::from("TCP PROBE"))),
+        );
+
+        elements.insert(
+            String::from("UDP_PROBE"),
+            Box::new(ButtonText::new(395, 165, 80, 50, String::from("UDP PROBE"))),
         );
 
         //.set_background_color(Color{red: 255, green: 0, blue: 0, alpha: 255}
         let mut button_kill: FUiElement =
-            Box::new(ButtonText::new(395, 217, 80, 50, String::from("KILL")));
+            Box::new(ButtonText::new(395, 220, 80, 50, String::from("KILL")));
         button_kill.set_background_color(Color {
             red: 255,
             green: 165,
@@ -121,6 +126,7 @@ impl UiState {
             draw_items.push(String::from("ARP_SCAN"));
             draw_items.push(String::from("ICMP"));
             draw_items.push(String::from("TCP_PROBE"));
+            draw_items.push(String::from("UDP_PROBE"));
             draw_items.push(String::from("ButtonKill"));
         }
 

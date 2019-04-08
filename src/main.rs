@@ -407,7 +407,11 @@ fn main() -> ! {
                                     &mut rng,
                                     &neighbors,
                                 );
-                                scroll_text.set_lines(alive_neighbors.to_string_vec());
+                                if alive_neighbors.is_empty() {
+                                    scroll_text.add_line(String::from("No neighbors responded to pings"));
+                                } else {
+                                    scroll_text.set_lines(alive_neighbors.to_string_vec());
+                                }
                             } else {
                                 scroll_text.set_lines(vec![String::from(
                                     "No valid neighbors to ping, try performing an ARP scan",
@@ -426,11 +430,36 @@ fn main() -> ! {
                                     &mut ethernet_interface.as_mut().unwrap(),
                                     &neighbors,
                                 );
-                                scroll_text.set_lines(ports.to_string_vec());
+                                if ports.is_empty() {
+                                    scroll_text.add_line(String::from("No open TCP ports found"));
+                                } else {
+                                    scroll_text.set_lines(ports.to_string_vec());
+                                }
                             } else {
-                                scroll_text.set_lines(vec![String::from(
+                                scroll_text.add_line(String::from(
+                                    "No neighbors to probe, perform an ARP scan first"
+                                ));
+                            }
+                            scroll_text.draw(&mut layer_1);
+                        } else if item_ref == "UDP_PROBE" {
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            if !neighbors.is_empty() {
+                                scroll_text.set_lines(vec![String::from("Probing neighbors...")]);
+                                scroll_text.draw(&mut layer_1);
+                                let ports = network::udp::probe_addresses(
+                                    &mut ethernet_interface.as_mut().unwrap(),
+                                    &neighbors,
+                                );
+                                if ports.is_empty() {
+                                    scroll_text.add_line(String::from("No open UDP ports found"));
+                                } else {
+                                    scroll_text.set_lines(ports.to_string_vec());
+                                }
+                            } else {
+                                scroll_text.add_line(String::from(
                                     "No neighbors to probe, perform an ARP scan first",
-                                )]);
+                                ));
                             }
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ButtonInfo" {

@@ -73,7 +73,8 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         self.lines = vec![text];
     }
 
-    fn set_lines(&mut self, lines: Vec<String>) {
+    fn set_lines(&mut self, lines: Vec<String>){
+        self.lines_start = 0;
         self.lines = lines;
     }
 

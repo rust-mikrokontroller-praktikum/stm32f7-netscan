@@ -377,6 +377,8 @@ fn main() -> ! {
                             
                             scroll_text.set_lines(vec!());
                             
+                            scroll_text.add_line(format!("MAC: {}", ETH_ADDR.to_string()));
+                            
                             for addr in iface.ip_addrs() {
                                 if let IpCidr::Ipv4(x) = addr {
                                     scroll_text.add_line(format!("IPv4: {}", x.address()));

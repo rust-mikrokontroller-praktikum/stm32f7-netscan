@@ -174,6 +174,8 @@ fn main() -> ! {
 
     let mut attack_gateway_v4_active = false;
 
+    let mut dns_servers: [Option<Ipv4Address>; 3] = [None; 3];
+
     loop {
         // poll button state
         let current_button_state = pins.button.get();
@@ -312,6 +314,9 @@ fn main() -> ! {
                                         }
                                         None => println!("DHCP Response without default route"),
                                     };
+
+                                    dns_servers = x.dns_servers;
+                                    
                                     layer_2.clear();
                                     got_dhcp = true;
                                     new_ui_state = UiStates::Start;
@@ -452,6 +457,12 @@ fn main() -> ! {
                                         ));
                                     });
                             });
+
+                            for dns_server in dns_servers.iter() {
+                                if let Some(x) = dns_server {
+                                    scroll_text.add_line(format!("DNS: {}", x));
+                                }
+                            }
 
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ButtonKill" {

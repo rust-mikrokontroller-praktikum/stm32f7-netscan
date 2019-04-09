@@ -57,15 +57,33 @@ impl UiState {
         );
         elements.insert(
             String::from("INIT_10_0_0_0"),
-            Box::new(ButtonText::new(30, 141, 110, 50, String::from("10.0.0.0/8"))),
+            Box::new(ButtonText::new(
+                30,
+                141,
+                110,
+                50,
+                String::from("10.0.0.0/8"),
+            )),
         );
         elements.insert(
             String::from("INIT_172_16_0_0"),
-            Box::new(ButtonText::new(170, 141, 110, 50, String::from("172.16.0.0/12"))),
+            Box::new(ButtonText::new(
+                170,
+                141,
+                110,
+                50,
+                String::from("172.16.0.0/12"),
+            )),
         );
         elements.insert(
             String::from("INIT_192_168_0_0"),
-            Box::new(ButtonText::new(310, 141, 110, 50, String::from("192.168.0.0/16"))),
+            Box::new(ButtonText::new(
+                310,
+                141,
+                110,
+                50,
+                String::from("192.168.0.0/16"),
+            )),
         );
 
         //Start

@@ -5,9 +5,9 @@ use smoltcp::socket::*;
 use smoltcp::time::{Duration, Instant};
 use stm32f7_discovery::system_clock;
 
-use super::{PortScan, PortScans};
 use super::arp::ArpResponses;
 use super::services::{Service, TCP_SERVICES};
+use super::{PortScan, PortScans};
 
 pub fn probe_addresses<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
@@ -59,8 +59,8 @@ where
             while socket_count > 0 {
                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
                 match iface.poll(&mut sockets, timestamp) {
-                    Ok(_) => {},
-                    Err(_) => {},
+                    Ok(_) => {}
+                    Err(_) => {}
                 }
                 for (done, opt) in handles.iter_mut() {
                     if *done {

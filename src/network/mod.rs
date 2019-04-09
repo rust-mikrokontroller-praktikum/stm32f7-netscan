@@ -23,7 +23,6 @@ pub trait Stringable {
     fn to_string(&self) -> String;
 }
 
-
 #[derive(Debug)]
 pub struct PortScan(pub Ipv4Address, pub Vec<&'static Service>);
 pub type PortScans = Vec<PortScan>;

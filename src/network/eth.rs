@@ -21,7 +21,13 @@ impl super::StringableVec for StatsResponses {
     }
 }
 
-pub fn listen(stats: &mut StatsResponses, iface: &mut EthernetDevice, eth_addr: EthernetAddress, neighbors: &ArpResponses, gw: Option<Ipv4Address>) -> Result<(), String> {
+pub fn listen(
+    stats: &mut StatsResponses,
+    iface: &mut EthernetDevice,
+    eth_addr: EthernetAddress,
+    neighbors: &ArpResponses,
+    gw: Option<Ipv4Address>,
+) -> Result<(), String> {
     let mut tries = 0;
     let caps = iface.capabilities();
     loop {
@@ -57,20 +63,31 @@ pub fn listen(stats: &mut StatsResponses, iface: &mut EthernetDevice, eth_addr: 
                             frame.payload_mut().copy_from_slice(&payload);
                         },
                     ) {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(x) => return Err(x.to_string()),
                     };
                 }
-            },
-            Err(::smoltcp::Error::Unrecognized) => { },
-            Err(x) => {},
+            }
+            Err(::smoltcp::Error::Unrecognized) => {}
+            Err(x) => {}
         };
     }
     Ok(())
 }
 
-fn process_eth<'a, T: AsRef<[u8]>>(gw: Option<Ipv4Address>,
-    neighbors: &ArpResponses, eth_addr: EthernetAddress, frame: &'a T, caps: &DeviceCapabilities) -> Result<(Option<(EthernetAddress, EthernetAddress, Vec<u8>, usize)>, Ipv4Address), smoltcp::Error> {
+fn process_eth<'a, T: AsRef<[u8]>>(
+    gw: Option<Ipv4Address>,
+    neighbors: &ArpResponses,
+    eth_addr: EthernetAddress,
+    frame: &'a T,
+    caps: &DeviceCapabilities,
+) -> Result<
+    (
+        Option<(EthernetAddress, EthernetAddress, Vec<u8>, usize)>,
+        Ipv4Address,
+    ),
+    smoltcp::Error,
+> {
     // Ignore any packets not directed to our hardware address or any of the multicast groups.
     let eth_frame = EthernetFrame::new_checked(frame)?;
 
@@ -88,22 +105,30 @@ fn process_eth<'a, T: AsRef<[u8]>>(gw: Option<Ipv4Address>,
             let ipv4_repr = Ipv4Repr::parse(&ipv4_packet, &checksum_caps)?;
             let dst_addr = match neighbors.get(&ipv4_repr.dst_addr) {
                 Some(x) => Some(x),
-                None => if let Some(gw) = gw {
-                    neighbors.get(&gw)
-                } else {
-                    None
+                None => {
+                    if let Some(gw) = gw {
+                        neighbors.get(&gw)
+                    } else {
+                        None
+                    }
                 }
             };
 
             if let Some(dst) = dst_addr {
-                Ok(((Some((eth_frame.src_addr(), *dst, Vec::from(eth_frame.payload()), eth_frame.payload().len())), ipv4_repr.src_addr)))
+                Ok(((
+                    Some((
+                        eth_frame.src_addr(),
+                        *dst,
+                        Vec::from(eth_frame.payload()),
+                        eth_frame.payload().len(),
+                    )),
+                    ipv4_repr.src_addr,
+                )))
             } else {
                 Ok((None, ipv4_repr.src_addr))
             }
-        },
-        e => { 
-            Err(::smoltcp::Error::Unrecognized)
-        },
+        }
+        e => Err(::smoltcp::Error::Unrecognized),
     }
 }
 

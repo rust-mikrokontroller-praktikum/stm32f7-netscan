@@ -73,12 +73,12 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         self.lines = vec![text];
     }
 
-    fn set_lines(&mut self, lines: Vec<String>){
+    fn set_lines(&mut self, lines: Vec<String>) {
         self.lines_start = 0;
         self.lines = lines;
     }
 
-    fn get_background_color(&mut self) -> Color{
+    fn get_background_color(&mut self) -> Color {
         self.background_color
     }
 
@@ -86,7 +86,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         self.background_color = color;
     }
 
-    fn get_text_color(&mut self) -> Color{
+    fn get_text_color(&mut self) -> Color {
         self.text_color
     }
 
@@ -101,18 +101,18 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
     fn set_lines_start(&mut self, lines_start: usize) {
         if lines_start < 0 {
             println!("lines_start < 0");
-        } else if lines_start > self.lines.len() - (self.y_size/8 - 1){
+        } else if lines_start > self.lines.len() - (self.y_size / 8 - 1) {
             println!("lines_start > lines.len - lines_show");
         } else {
             self.lines_start = lines_start;
         }
     }
 
-    fn get_lines(&mut self) -> Vec<String>{
+    fn get_lines(&mut self) -> Vec<String> {
         self.lines.clone()
     }
 
-    fn get_lines_start(&mut self) -> usize{
+    fn get_lines_start(&mut self) -> usize {
         self.lines_start
     }
 
@@ -167,7 +167,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         for line in self.lines.iter() {
             if count_lines_start < self.lines_start {
                 //println!("Skip line");
-            } else if count_lines_show >= ((self.y_size/8)-1){
+            } else if count_lines_show >= ((self.y_size / 8) - 1) {
                 //println!("End line");
                 break;
             } else {

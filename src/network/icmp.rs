@@ -63,16 +63,19 @@ where
     let icmp_socket = IcmpSocket::new(rx_buffer, tx_buffer);
     let icmp_handle = sockets.add(icmp_socket);
 
-    match iface.poll(&mut sockets, Instant::from_millis(system_clock::ms() as i64)) {
-        Ok(_) => {},
-        Err(_) => {},
+    match iface.poll(
+        &mut sockets,
+        Instant::from_millis(system_clock::ms() as i64),
+    ) {
+        Ok(_) => {}
+        Err(_) => {}
     }
 
     loop {
         let timestamp = Instant::from_millis(system_clock::ms() as i64);
         match iface.poll(&mut sockets, timestamp) {
-            Ok(_) => {},
-            Err(_) => {},
+            Ok(_) => {}
+            Err(_) => {}
         }
 
         {

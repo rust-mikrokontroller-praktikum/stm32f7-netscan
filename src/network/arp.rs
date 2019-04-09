@@ -25,7 +25,10 @@ impl super::StringableVec for ArpResponses {
     }
 }
 
-pub fn listen(iface: &mut EthernetDevice, eth_addr: EthernetAddress) -> Option<super::cidr::Ipv4Cidr> {
+pub fn listen(
+    iface: &mut EthernetDevice,
+    eth_addr: EthernetAddress,
+) -> Option<super::cidr::Ipv4Cidr> {
     let mut tries = 0;
     let mut addrs = Vec::<Ipv4Address>::new();
     loop {
@@ -48,7 +51,7 @@ pub fn listen(iface: &mut EthernetDevice, eth_addr: EthernetAddress) -> Option<s
             }) => addrs.push(source_protocol_addr),
             Ok(_) => {}
             Err(::smoltcp::Error::Unrecognized) => {}
-            Err(_) => {},
+            Err(_) => {}
         };
         system_clock::wait_ms(10);
     }
@@ -89,7 +92,7 @@ pub fn request(
             arp_req.emit(&mut packet);
         },
     ) {
-        Ok(x) => {},
+        Ok(x) => {}
         Err(x) => return Err(x.to_string()),
     };
     let mut tries = 0;
@@ -114,7 +117,7 @@ pub fn request(
             }) => return Ok(false),
             Ok(_) => {}
             Err(::smoltcp::Error::Unrecognized) => {}
-            Err(_) => {},
+            Err(_) => {}
         };
     }
     Ok(true)
@@ -193,7 +196,7 @@ pub fn get_neighbors_v4(
             }
             Ok(_) => {}
             Err(::smoltcp::Error::Unrecognized) => {}
-            Err(_) => {},
+            Err(_) => {}
         };
     }
     Ok(found_addrs)

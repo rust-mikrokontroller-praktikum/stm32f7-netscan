@@ -2,13 +2,13 @@ use alloc::vec::Vec;
 use smoltcp::iface::EthernetInterface;
 use smoltcp::phy::Device;
 use smoltcp::socket::*;
-use smoltcp::wire::{IpEndpoint, Ipv4Address};
 use smoltcp::time::{Duration, Instant};
+use smoltcp::wire::{IpEndpoint, Ipv4Address};
 use stm32f7_discovery::system_clock;
 
-use super::{PortScan, PortScans};
 use super::arp::ArpResponses;
 use super::services::{Service, UDP_SERVICES};
+use super::{PortScan, PortScans};
 
 pub fn probe_addresses<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
@@ -31,8 +31,10 @@ where
         while !iter_done {
             let mut sockets = SocketSet::new(Vec::new());
             for i in 0..10 {
-                let udp_rx_buffer = UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY], vec![0; 64]);
-                let udp_tx_buffer = UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY], vec![0; 128]);
+                let udp_rx_buffer =
+                    UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY], vec![0; 64]);
+                let udp_tx_buffer =
+                    UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY], vec![0; 128]);
                 let udp_socket = UdpSocket::new(udp_rx_buffer, udp_tx_buffer);
 
                 let udp_handle = sockets.add(udp_socket);
@@ -73,7 +75,9 @@ where
                         let (stamp, handle, addr, port) = x;
                         let mut socket = sockets.get::<UdpSocket>(*handle);
                         if socket.can_send() {
-                            socket.send_slice(b"", IpEndpoint::new((*addr).into(), port.0)).unwrap();
+                            socket
+                                .send_slice(b"", IpEndpoint::new((*addr).into(), port.0))
+                                .unwrap();
                         }
                         if socket.can_recv() {
                             serv.push(port);

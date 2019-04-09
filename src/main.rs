@@ -473,12 +473,16 @@ fn main() -> ! {
                         } else if item_ref == "ARP_SCAN" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
+
+                            scroll_text.set_title(String::from("ARP Scan"));
+
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             if let IpCidr::Ipv4(cidr) = iface.ip_addrs()[0] {
                                 scroll_text.add_line(String::from(
                                     "Scanning for neighbors via ARP solicitations...",
                                 ));
                                 scroll_text.draw(&mut layer_1);
+                                
                                 neighbors = match network::arp::get_neighbors_v4(
                                     &mut iface.device,
                                     ETH_ADDR,
@@ -489,12 +493,15 @@ fn main() -> ! {
                                         panic!("{}", x);
                                     }
                                 };
+
                                 if neighbors.is_empty() {
                                     scroll_text.add_line(String::from("No neighbors found"));;
                                 } else {
                                     scroll_text.set_lines(neighbors.to_string_vec());
                                 }
+
                                 scroll_text.draw(&mut layer_1);
+
                                 for neighbor in &neighbors {
                                     iface.inner.neighbor_cache.fill(
                                         (*neighbor.0).into(),
@@ -510,6 +517,9 @@ fn main() -> ! {
                         } else if item_ref == "ICMP" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
+
+                            scroll_text.set_title(String::from("ICMP Ping"));
+
                             if !neighbors.is_empty() {
                                 let alive_neighbors = network::icmp::scan_v4(
                                     &mut ethernet_interface.as_mut().unwrap(),
@@ -533,6 +543,9 @@ fn main() -> ! {
                         } else if item_ref == "TCP_PROBE" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            
+                            scroll_text.set_title(String::from("TCP Scan"));
+
                             if !neighbors.is_empty() {
                                 scroll_text.set_lines(vec![String::from("Probing neighbors...")]);
                                 scroll_text.draw(&mut layer_1);
@@ -550,9 +563,13 @@ fn main() -> ! {
                         } else if item_ref == "UDP_PROBE" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
+                            
+                            scroll_text.set_title(String::from("UDP Scan"));
+
                             if !neighbors.is_empty() {
                                 scroll_text.set_lines(vec![String::from("Probing neighbors...")]);
                                 scroll_text.draw(&mut layer_1);
+                                
                                 let ports = network::udp::probe_addresses(
                                     &mut ethernet_interface.as_mut().unwrap(),
                                     &neighbors,
@@ -569,6 +586,7 @@ fn main() -> ! {
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
                             let iface = &mut ethernet_interface.as_mut().unwrap();
 
+                            scroll_text.set_title(String::from("Info"));
                             scroll_text.set_lines(vec![]);
 
                             scroll_text.add_line(format!("MAC: {}", ETH_ADDR.to_string()));

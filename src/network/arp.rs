@@ -186,7 +186,7 @@ pub fn attack_gateway_v4_request<'b, 'c, 'e, DeviceT>(
     });
 
     let arp_reqest = ArpRepr::EthernetIpv4 {
-        operation: ArpOperation::Reply,
+        operation: ArpOperation::Request,
         source_hardware_addr: eth_addr,
         source_protocol_addr: gateway,
         target_hardware_addr: EthernetAddress([0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),

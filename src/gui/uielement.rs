@@ -32,6 +32,10 @@ pub trait UiElement<T: Framebuffer>: Any {
         println!("add_line called for unimplemented struct")
     }
 
+    fn add_lines(&mut self, mut lines: Vec<String>) {
+        println!("add_lines called for unimplemented struct")
+    }
+
     fn set_lines_start(&mut self, lines_start: usize) {
         println!("set_lines_start called for unimplemented struct")
     }

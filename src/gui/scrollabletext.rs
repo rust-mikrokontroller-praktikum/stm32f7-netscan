@@ -95,6 +95,10 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         self.lines.push(line);
     }
 
+    fn add_lines(&mut self, mut lines: Vec<String>) {
+        self.lines.append(&mut lines);
+    }
+
     fn set_lines_start(&mut self, lines_start: usize) {
         if lines_start < 0 {
             println!("lines_start < 0");

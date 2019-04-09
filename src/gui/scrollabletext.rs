@@ -202,7 +202,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
                     }
                     temp_x_pos += 8;
 
-                    if temp_x_pos >= self.x_pos + self.x_size {
+                    if temp_x_pos >= (self.x_pos + self.x_size - 1) {
                         temp_y_pos += 8;
                         temp_x_pos = self.x_pos;
 

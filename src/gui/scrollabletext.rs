@@ -11,7 +11,6 @@ pub struct ScrollableText {
     x_size: usize,
     y_size: usize,
     title: String,
-    lines_show: usize,
     lines: Vec<String>,
     lines_start: usize,
     background_color: Color,
@@ -32,8 +31,6 @@ impl ScrollableText {
             x_size: x_size,
             y_size: y_size,
             title: String::from(""),
-            // TODO: y_size / font_height
-            lines_show: 10,
             lines: lines,
             lines_start: 0,
             background_color: Color {

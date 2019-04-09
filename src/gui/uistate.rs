@@ -86,8 +86,18 @@ impl UiState {
 
         elements.insert(
             String::from("ButtonInfo"),
-            Box::new(ButtonText::new(310, 220, 80, 50, String::from("INFO"))),
+            Box::new(ButtonText::new(310, 165, 80, 50, String::from("INFO"))),
         );
+
+        let mut button_kill_gateway: FUiElement =
+            Box::new(ButtonText::new(310, 220, 80, 50, String::from("KILL GW")));
+        button_kill_gateway.set_background_color(Color {
+            red: 255,
+            green: 255,
+            blue: 0,
+            alpha: 255,
+        });
+        elements.insert(String::from("ButtonKillGateway"), button_kill_gateway);
 
         elements.insert(
             String::from("ARP_SCAN"),
@@ -109,16 +119,15 @@ impl UiState {
             Box::new(ButtonText::new(395, 165, 80, 50, String::from("UDP PROBE"))),
         );
 
-        //.set_background_color(Color{red: 255, green: 0, blue: 0, alpha: 255}
-        let mut button_kill: FUiElement =
-            Box::new(ButtonText::new(395, 220, 80, 50, String::from("KILL")));
-        // button_kill.set_background_color(Color {
-        //     red: 255,
-        //     green: 165,
-        //     blue: 0,
-        //     alpha: 255,
-        // });
-        elements.insert(String::from("ButtonKill"), button_kill);
+        let mut button_kill_network: FUiElement =
+            Box::new(ButtonText::new(395, 220, 80, 50, String::from("KILL NET")));
+        button_kill_network.set_background_color(Color {
+            red: 255,
+            green: 255,
+            blue: 0,
+            alpha: 255,
+        });
+        elements.insert(String::from("ButtonKillNetwork"), button_kill_network);
 
         //elements.insert(String::from("ButtonHome"), Box::new(ButtonText::new(400, 222, 80, 50, String::from("HOME"))));
 
@@ -138,12 +147,13 @@ impl UiState {
             draw_items.push(String::from("ButtonScrollUp"));
             draw_items.push(String::from("ButtonScrollDown"));
             draw_items.push(String::from("ButtonInfo"));
+            draw_items.push(String::from("ButtonKillGateway"));
 
             draw_items.push(String::from("ARP_SCAN"));
             draw_items.push(String::from("ICMP"));
             draw_items.push(String::from("TCP_PROBE"));
             draw_items.push(String::from("UDP_PROBE"));
-            draw_items.push(String::from("ButtonKill"));
+            draw_items.push(String::from("ButtonKillNetwork"));
         }
 
         //Clear and redraw

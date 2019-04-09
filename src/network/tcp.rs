@@ -43,7 +43,7 @@ where
                 };
                 {
                     let mut socket = sockets.get::<TcpSocket>(tcp_handle);
-                    socket.connect((addr.0, port.0), local_port).unwrap();
+                    socket.connect((*addr.0, port.0), local_port).unwrap();
                     local_port += 1;
                 }
                 handles[i] = (
@@ -90,7 +90,7 @@ where
             }
             // sockets.prune();
         }
-        ports.push(PortScan(addr.0, serv));
+        ports.push(PortScan(*addr.0, serv));
     }
     ports
 }

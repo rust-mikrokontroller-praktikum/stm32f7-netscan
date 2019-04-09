@@ -2,6 +2,8 @@ use alloc::string::String;
 use byteorder::{ByteOrder, NetworkEndian};
 use smoltcp::wire::Ipv4Address;
 
+use super::Stringable;
+
 // pub enum Cidr {
 //     Ipv4Cidr,
 //     Ipv6Cidr,
@@ -14,10 +16,6 @@ use smoltcp::wire::Ipv4Address;
 
 type Ipv4Addr = u32;
 // type Ipv6Addr = u128;
-
-trait Stringable {
-    fn to_string(&self) -> String;
-}
 
 impl Stringable for Ipv4Addr {
     fn to_string(&self) -> String {
@@ -34,6 +32,12 @@ pub struct Ipv4Cidr {
     last_addr: Ipv4Addr,
     pub addr: Ipv4Addr,
     pub netmask: u8,
+}
+
+impl Stringable for Ipv4Cidr {
+    fn to_string(&self) -> String {
+        format!("{}/{}", self.addr.to_string(), self.netmask)
+    }
 }
 
 // pub struct Ipv6Cidr {

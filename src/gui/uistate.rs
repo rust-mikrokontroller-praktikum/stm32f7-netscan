@@ -85,6 +85,11 @@ impl UiState {
         );
 
         elements.insert(
+            String::from("TRAFFIC"),
+            Box::new(ButtonText::new(310, 111, 80, 50, String::from("Traffic"))),
+        );
+
+        elements.insert(
             String::from("ButtonInfo"),
             Box::new(ButtonText::new(310, 165, 80, 50, String::from("INFO"))),
         );
@@ -146,6 +151,7 @@ impl UiState {
 
             draw_items.push(String::from("ButtonScrollUp"));
             draw_items.push(String::from("ButtonScrollDown"));
+            draw_items.push(String::from("TRAFFIC"));
             draw_items.push(String::from("ButtonInfo"));
             draw_items.push(String::from("ButtonKillGateway"));
 

@@ -9,6 +9,7 @@ use services::Service;
 
 pub mod arp;
 pub mod cidr;
+pub mod eth;
 pub mod icmp;
 pub mod services;
 pub mod tcp;
@@ -17,6 +18,11 @@ pub mod udp;
 pub trait StringableVec {
     fn to_string_vec(&self) -> Vec<String>;
 }
+
+pub trait Stringable {
+    fn to_string(&self) -> String;
+}
+
 
 #[derive(Debug)]
 pub struct PortScan(pub Ipv4Address, pub Vec<&'static Service>);

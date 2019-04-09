@@ -53,7 +53,7 @@ where
                     Some((
                         Instant::from_millis(system_clock::ms() as i64),
                         udp_handle,
-                        addr.0,
+                        *addr.0,
                         port,
                     )),
                 );
@@ -89,7 +89,7 @@ where
                 }
             }
         }
-        ports.push(PortScan(addr.0, serv));
+        ports.push(PortScan(*addr.0, serv));
     }
     ports
 }

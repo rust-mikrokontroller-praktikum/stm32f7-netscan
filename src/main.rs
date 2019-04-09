@@ -22,7 +22,7 @@ extern crate smoltcp;
 use gui::fuielement::FUiElement;
 use gui::uistate::UiState;
 use gui::uistates::UiStates;
-use network::StringableVec;
+use network::{Stringable, StringableVec};
 
 use alloc::collections::btree_map::BTreeMap;
 use alloc::string::String;
@@ -43,7 +43,7 @@ use smoltcp::{
         Socket, SocketSet, UdpPacketMetadata, UdpSocketBuffer,
     },
     time::{Duration, Instant},
-    wire::{EthernetAddress, IpCidr, Ipv4Address},
+    wire::{EthernetAddress, IpAddress, IpCidr, Ipv4Address},
 };
 use stm32f7::stm32f7x6::{CorePeripherals, Interrupt, Peripherals};
 use stm32f7_discovery::{
@@ -165,6 +165,7 @@ fn main() -> ! {
     // let mut ethernet_interface: Option<EthernetInterface<'b, 'c, 'e, DeviceT>> = None;
     let mut ethernet_interface = None;
     let mut neighbors = network::arp::ArpResponses::new();
+    let mut traffic_stats = network::eth::StatsResponses::new();
     let mut got_dhcp = false;
 
     let mut previous_button_state = pins.button.get();
@@ -174,6 +175,7 @@ fn main() -> ! {
 
     let mut attack_gateway_v4_active = false;
     let mut attack_network_v4_active = false;
+    let mut traffic_stats_active = false;
 
     let mut dns_servers: [Option<Ipv4Address>; 3] = [None; 3];
 
@@ -329,6 +331,31 @@ fn main() -> ! {
                                     break;
                                 }
                             }
+                        } else if item_ref == "INIT_LISTEN" {
+                            let iface = &mut ethernet_interface.as_mut().unwrap();
+                            println!("Listening for activity in the local network...");
+                            match network::arp::listen(&mut iface.device, ETH_ADDR) {
+                                Some(cidr) => {
+                                    println!("Setting subnet to {}", cidr.to_string());
+                                    for addr in cidr {
+                                        let s_addr = network::cidr::to_ipv4_address(addr);
+                                        match network::arp::request(&mut iface.device, ETH_ADDR, s_addr) {
+                                            Ok(x) => {
+                                                if x {
+                                                    new_ui_state = UiStates::Start;
+                                                    network::set_ip4_address(iface, s_addr, 0);
+                                                    layer_2.clear();
+                                                    break;
+                                                }
+                                            }
+                                            Err(e) => println!("Error during ARP request: {}", e),
+                                        }
+                                    }
+                                },
+                                None => {
+                                    println!("No activity in local network, please try again later.");
+                                },
+                            }
                         } else if item_ref == "INIT_GLOBAL" {
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             let cidr = network::cidr::Ipv4Cidr::new(0x01_00_00_00, 0);
@@ -411,6 +438,20 @@ fn main() -> ! {
                             scroll_text.set_lines_start(current_lines_start + 1);
                             scroll_text.draw(&mut layer_1);
                             }
+                        } else if item_ref == "TRAFFIC" {
+                            let stats_button: &mut FUiElement =
+                                element_map.get_mut(&String::from("TRAFFIC")).unwrap();
+                            let color1 = Color{red: 0, green: 255, blue: 255, alpha: 255};
+                            let color2 = Color{red: 0, green: 255, blue: 0, alpha: 255};
+                            if !traffic_stats_active {
+                                stats_button.set_background_color(color1);
+                                traffic_stats_active = true;
+                                traffic_stats.clear();
+                            } else {
+                                traffic_stats_active = false;
+                                stats_button.set_background_color(color2);
+                            }
+                            stats_button.draw(&mut layer_1);
                         } else if item_ref == "ARP_SCAN" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
@@ -436,8 +477,8 @@ fn main() -> ! {
                                 scroll_text.draw(&mut layer_1);
                                 for neighbor in &neighbors {
                                     iface.inner.neighbor_cache.fill(
-                                        neighbor.0.into(),
-                                        neighbor.1,
+                                        (*neighbor.0).into(),
+                                        *neighbor.1,
                                         Instant::from_millis(system_clock::ms() as i64),
                                     );
                                 }
@@ -609,7 +650,44 @@ fn main() -> ! {
             previous_touch_state = false;
         }
 
+        if traffic_stats_active {
+            let mut gateway = None;
+            let iface = ethernet_interface.as_mut().unwrap();
+            iface.routes_mut().update(|routes_map| {
+                routes_map
+                    .get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
+                    .map(|default_route| {
+                        //gateway = default_route.via_router;
+                        if let IpAddress::Ipv4(x) = default_route.via_router {
+                            gateway = Some(x)
+                        }
+                    });
+            });
+            let scroll_text: &mut FUiElement =
+                element_map.get_mut(&String::from("ScrollText")).unwrap();
+            match network::eth::listen(&mut traffic_stats, &mut iface.device, ETH_ADDR, &neighbors, gateway) {
+                Ok(_) => scroll_text.set_lines(traffic_stats.to_string_vec()),
+                Err(x) => scroll_text.add_line(format!("Error during processing: {}", x)),
+            }
+        }
+
         if system_clock::ticks() % 100 == 0{
+            if traffic_stats_active {
+                {
+                    let stats_button: &mut FUiElement = element_map.get_mut(&String::from("TRAFFIC")).unwrap();
+                    let color1 = Color{red: 0, green: 255, blue: 255, alpha: 255};
+                    let color2 = Color{red: 0, green: 255, blue: 0, alpha: 255};
+
+                    // Button Animation
+                    if stats_button.get_background_color() == color1{
+                        stats_button.set_background_color(color2);
+                    } else {
+                        stats_button.set_background_color(color1);
+                    }
+                    stats_button.draw(&mut layer_1);
+                }
+                element_map.get_mut(&String::from("ScrollText")).unwrap().draw(&mut layer_1);
+            }
             if attack_gateway_v4_active {
 
                 let button_kill_gateway: &mut FUiElement =

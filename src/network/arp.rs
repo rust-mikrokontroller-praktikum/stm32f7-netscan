@@ -1,5 +1,5 @@
 use super::cidr;
-use alloc::collections::BTreeSet;
+use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use smoltcp::iface::EthernetInterface;
@@ -8,10 +8,12 @@ use smoltcp::time::Instant;
 use smoltcp::wire::*;
 use stm32f7_discovery::{ethernet::EthernetDevice, system_clock};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ArpResponse(pub Ipv4Address, pub EthernetAddress);
+use super::eth::dispatch_ethernet;
 
-pub type ArpResponses = BTreeSet<ArpResponse>;
+// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+// pub struct ArpResponse(pub Ipv4Address, pub EthernetAddress);
+
+pub type ArpResponses = BTreeMap<Ipv4Address, EthernetAddress>;
 
 impl super::StringableVec for ArpResponses {
     fn to_string_vec(&self) -> Vec<String> {
@@ -21,6 +23,36 @@ impl super::StringableVec for ArpResponses {
         }
         ret
     }
+}
+
+pub fn listen(iface: &mut EthernetDevice, eth_addr: EthernetAddress) -> Option<super::cidr::Ipv4Cidr> {
+    let mut tries = 0;
+    let mut addrs = Vec::<Ipv4Address>::new();
+    loop {
+        let (rx_token, _) = match iface.receive() {
+            None => {
+                if tries > 100 {
+                    break;
+                }
+                tries += 1;
+                continue;
+            }
+            Some(tokens) => tokens,
+        };
+        match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
+            process_arp(eth_addr, &frame)
+        }) {
+            Ok(ArpRepr::EthernetIpv4 {
+                source_protocol_addr,
+                ..
+            }) => addrs.push(source_protocol_addr),
+            Ok(_) => {}
+            Err(::smoltcp::Error::Unrecognized) => {}
+            Err(_) => {},
+        };
+        system_clock::wait_ms(10);
+    }
+    None
 }
 
 pub fn request(
@@ -94,7 +126,8 @@ pub fn get_neighbors_v4(
     cidr: &mut cidr::Ipv4Cidr,
 ) -> Result<ArpResponses, String> {
     // let mut found_addrs = Vec::<ArpResponse>::new();
-    let mut found_addrs = BTreeSet::<ArpResponse>::new();
+    // let mut found_addrs = BTreeSet::<ArpResponse>::new();
+    let mut found_addrs = ArpResponses::new();
     let mut arp_req = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Request,
         source_hardware_addr: eth_addr,
@@ -156,7 +189,7 @@ pub fn get_neighbors_v4(
                 source_protocol_addr,
                 ..
             }) => {
-                found_addrs.insert(ArpResponse(source_protocol_addr, source_hardware_addr));
+                found_addrs.insert(source_protocol_addr, source_hardware_addr);
             }
             Ok(_) => {}
             Err(::smoltcp::Error::Unrecognized) => {}
@@ -231,9 +264,9 @@ pub fn attack_network_v4_request<'b, 'c, 'e, DeviceT>(
         let arp_reqest = ArpRepr::EthernetIpv4 {
             operation: ArpOperation::Request,
             source_hardware_addr: eth_addr,
-            source_protocol_addr: addr.0,
+            source_protocol_addr: *addr.0,
             target_hardware_addr: EthernetAddress([0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
-            target_protocol_addr: addr.0,
+            target_protocol_addr: *addr.0,
         };
 
         let mut buffer = vec![0; arp_reqest.buffer_len()];
@@ -329,9 +362,9 @@ pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
         let arp_reply = ArpRepr::EthernetIpv4 {
             operation: ArpOperation::Reply,
             source_hardware_addr: eth_addr,
-            source_protocol_addr: addr.0,
+            source_protocol_addr: *addr.0,
             target_hardware_addr: eth_addr,
-            target_protocol_addr: addr.0,
+            target_protocol_addr: *addr.0,
         };
 
         let mut buffer = vec![0; arp_reply.buffer_len()];
@@ -360,29 +393,6 @@ pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
             Err(_) => (),
         }
     }
-}
-
-fn dispatch_ethernet<Tx, F>(
-    eth_addr: EthernetAddress,
-    tx_token: Tx,
-    timestamp: Instant,
-    buffer_len: usize,
-    f: F,
-) -> Result<(), smoltcp::Error>
-where
-    Tx: TxToken,
-    F: FnOnce(EthernetFrame<&mut [u8]>),
-{
-    let tx_len = EthernetFrame::<&[u8]>::buffer_len(buffer_len);
-    tx_token.consume(timestamp, tx_len, |tx_buffer| {
-        debug_assert!(tx_buffer.as_ref().len() == tx_len);
-        let mut frame = EthernetFrame::new_unchecked(tx_buffer.as_mut());
-        frame.set_src_addr(eth_addr);
-
-        f(frame);
-
-        Ok(())
-    })
 }
 
 fn process_arp<T: AsRef<[u8]>>(

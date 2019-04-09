@@ -35,8 +35,8 @@ where
     let mut found_addrs = Vec::<IcmpResponse>::new();
 
     for addr in addrs {
-        if let Some(x) = probe_v4(iface, rng, addr.0) {
-            found_addrs.push(IcmpResponse(addr.0, x));
+        if let Some(x) = probe_v4(iface, rng, *addr.0) {
+            found_addrs.push(IcmpResponse(*addr.0, x));
         }
     }
 

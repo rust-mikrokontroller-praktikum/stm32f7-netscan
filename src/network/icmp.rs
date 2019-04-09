@@ -33,22 +33,9 @@ where
     DeviceT: for<'d> Device<'d>,
 {
     let mut found_addrs = Vec::<IcmpResponse>::new();
-    let rx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 1500]);
-    let tx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 3000]);
-    let icmp_socket = IcmpSocket::new(rx_buffer, tx_buffer);
-    let mut sockets = SocketSet::new(Vec::new());
-
-    let icmp_handle = sockets.add(icmp_socket);
-
-    match iface.poll(&mut sockets, Instant::from_millis(system_clock::ms() as i64)) {
-        Ok(_) => {}
-        Err(e) => {
-            panic!("poll error: {}", e);
-        }
-    }
 
     for addr in addrs {
-        if let Some(x) = probe_v4(iface, rng, &mut sockets, icmp_handle, addr.0) {
+        if let Some(x) = probe_v4(iface, rng, addr.0) {
             found_addrs.push(IcmpResponse(addr.0, x));
         }
     }
@@ -59,8 +46,6 @@ where
 pub fn probe_v4<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     rng: &mut random::Rng,
-    sockets: &mut SocketSet,
-    handle: SocketHandle,
     addr: Ipv4Address,
 ) -> Option<Duration>
 where
@@ -70,21 +55,29 @@ where
     let mut send_at = Instant::from_millis(0);
     let mut seq_no = 0;
     let mut echo_payload = [0xffu8; 40];
-    // let mut waiting_queue = HashMap::new();
+    let mut sockets = SocketSet::new(Vec::new());
     let gident = rng.poll_and_get().expect("RNG Failed") as u16;
+
+    let rx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 1500]);
+    let tx_buffer = IcmpSocketBuffer::new([IcmpPacketMetadata::EMPTY; 1], vec![0; 3000]);
+    let icmp_socket = IcmpSocket::new(rx_buffer, tx_buffer);
+    let icmp_handle = sockets.add(icmp_socket);
+
+    match iface.poll(&mut sockets, Instant::from_millis(system_clock::ms() as i64)) {
+        Ok(_) => {},
+        Err(_) => {},
+    }
 
     loop {
         let timestamp = Instant::from_millis(system_clock::ms() as i64);
-        match iface.poll(sockets, timestamp) {
-            Ok(_) => {}
-            Err(e) => {
-                panic!("poll error: {}", e);
-            }
+        match iface.poll(&mut sockets, timestamp) {
+            Ok(_) => {},
+            Err(_) => {},
         }
 
         {
             let timestamp = Instant::from_millis(system_clock::ms() as i64);
-            let mut socket = sockets.get::<IcmpSocket>(handle);
+            let mut socket = sockets.get::<IcmpSocket>(icmp_handle);
             if !socket.is_open() {
                 socket.bind(IcmpEndpoint::Ident(gident)).unwrap();
                 send_at = timestamp;
@@ -97,7 +90,7 @@ where
 
                 let icmp_repr = Icmpv4Repr::EchoRequest {
                     ident: gident,
-                    seq_no: seq_no,
+                    seq_no,
                     data: &echo_payload,
                 };
 

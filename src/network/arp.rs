@@ -82,7 +82,7 @@ pub fn request(
             }) => return Ok(false),
             Ok(_) => {}
             Err(::smoltcp::Error::Unrecognized) => {}
-            Err(e) => println!("ARP Read Error: {:?}", e),
+            Err(_) => {},
         };
     }
     Ok(true)
@@ -217,7 +217,7 @@ pub fn attack_gateway_v4<'b, 'c, 'e, DeviceT>(
             },
         ) {
             Ok(x) => x,
-            Err(x) => println!("ARP Read Error"),
+            Err(e) => println!("ARP Read Error: {:?}", e),
         }
     }
 }

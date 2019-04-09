@@ -173,6 +173,7 @@ fn main() -> ! {
     let mut previous_touch_state = false;
 
     let mut attack_gateway_v4_active = false;
+    let mut attack_network_v4_active = false;
 
     let mut dns_servers: [Option<Ipv4Address>; 3] = [None; 3];
 

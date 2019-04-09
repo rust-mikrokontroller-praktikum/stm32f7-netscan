@@ -160,7 +160,7 @@ pub fn get_neighbors_v4(
             }
             Ok(_) => {}
             Err(::smoltcp::Error::Unrecognized) => {}
-            Err(e) => println!("ARP Read Error: {:?}", e),
+            Err(_) => {},
         };
     }
     Ok(found_addrs)
@@ -217,7 +217,7 @@ pub fn attack_gateway_v4<'b, 'c, 'e, DeviceT>(
             },
         ) {
             Ok(x) => x,
-            Err(e) => println!("ARP Read Error: {:?}", e),
+            Err(_) => {},
         }
     }
 }

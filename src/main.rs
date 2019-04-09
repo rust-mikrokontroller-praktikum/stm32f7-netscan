@@ -608,10 +608,14 @@ fn main() -> ! {
 
                 kill_button.draw(&mut layer_1);
                 
-                network::arp::attack_gateway_v4(
+                network::arp::attack_gateway_v4_request(
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
-                    &neighbors,
+                );
+
+                network::arp::attack_gateway_v4_reply(
+                    &mut ethernet_interface.as_mut().unwrap(),
+                    ETH_ADDR,
                 );
             } else {
                 let scroll_text: &mut FUiElement =

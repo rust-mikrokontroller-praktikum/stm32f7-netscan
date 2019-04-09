@@ -11,7 +11,9 @@ pub trait UiElement<T: Framebuffer>: Any {
     fn get_x_size(&mut self) -> usize;
     fn get_y_size(&mut self) -> usize;
 
+    fn get_background_color(&mut self) -> Color;
     fn set_background_color(&mut self, color: Color);
+    fn get_text_color(&mut self) -> Color;
     fn set_text_color(&mut self, color: Color);
 
     //fn run_touch_func(&mut self);

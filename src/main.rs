@@ -537,12 +537,12 @@ fn main() -> ! {
                             }
 
                             scroll_text.draw(&mut layer_1);
-                        } else if item_ref == "ButtonKill" {
-                            let button_kill: &mut FUiElement =
-                                element_map.get_mut(&String::from("ButtonKill")).unwrap();
+                        } else if item_ref == "ButtonKillGateway" {
+                            let button_kill_gateway: &mut FUiElement =
+                                element_map.get_mut(&String::from("ButtonKillGateway")).unwrap();
 
                             if !attack_gateway_v4_active {
-                                button_kill.set_background_color(Color {
+                                button_kill_gateway.set_background_color(Color {
                                     red: 255,
                                     green: 0,
                                     blue: 0,
@@ -551,8 +551,8 @@ fn main() -> ! {
 
                                 attack_gateway_v4_active = true;
                             } else {
-                                button_kill.set_background_color(Color {
-                                    red: 0,
+                                button_kill_gateway.set_background_color(Color {
+                                    red: 255,
                                     green: 255,
                                     blue: 0,
                                     alpha: 255,
@@ -561,7 +561,32 @@ fn main() -> ! {
                                 attack_gateway_v4_active = false;
                             }
 
-                            button_kill.draw(&mut layer_1);
+                            button_kill_gateway.draw(&mut layer_1);
+                        } else if item_ref == "ButtonKillNetwork" {
+                            let button_kill_network: &mut FUiElement =
+                                element_map.get_mut(&String::from("ButtonKillNetwork")).unwrap();
+
+                            if !attack_network_v4_active {
+                                button_kill_network.set_background_color(Color {
+                                    red: 255,
+                                    green: 0,
+                                    blue: 0,
+                                    alpha: 255,
+                                });
+
+                                attack_network_v4_active = true;
+                            } else {
+                                button_kill_network.set_background_color(Color {
+                                    red: 255,
+                                    green: 255,
+                                    blue: 0,
+                                    alpha: 255,
+                                });
+
+                                attack_network_v4_active = false;
+                            }
+
+                            button_kill_network.draw(&mut layer_1);
                         }
                     }
                 }
@@ -584,30 +609,23 @@ fn main() -> ! {
             previous_touch_state = false;
         }
 
-        if attack_gateway_v4_active && system_clock::ticks() % 100 == 0 {
+        if system_clock::ticks() % 100 == 0{
+            if attack_gateway_v4_active {
 
-            if !neighbors.is_empty() {
-                let kill_button: &mut FUiElement =
-                element_map.get_mut(&String::from("ButtonKill")).unwrap();
+                let button_kill_gateway: &mut FUiElement =
+                element_map.get_mut(&String::from("ButtonKillGateway")).unwrap();
+
+                let color1 = Color{red: 255, green: 0, blue: 0, alpha: 255};
+                let color2 = Color{red: 255, green: 165, blue: 0, alpha: 255};
 
                 // Button Animation
-                if system_clock::ticks() % 200 == 0{
-                    kill_button.set_background_color(Color{
-                        red: 255,
-                        green: 0,
-                        blue: 0,
-                        alpha: 255
-                    });
+                if button_kill_gateway.get_background_color() == color2{
+                    button_kill_gateway.set_background_color(color1);
                 } else {
-                    kill_button.set_background_color(Color{
-                        red: 255,
-                        green: 165,
-                        blue: 0,
-                        alpha: 255
-                    });
+                    button_kill_gateway.set_background_color(color2);
                 }
 
-                kill_button.draw(&mut layer_1);
+                button_kill_gateway.draw(&mut layer_1);
                 
                 network::arp::attack_gateway_v4_request(
                     &mut ethernet_interface.as_mut().unwrap(),
@@ -618,27 +636,59 @@ fn main() -> ! {
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
                 );
-            } else {
-                let scroll_text: &mut FUiElement =
-                element_map.get_mut(&String::from("ScrollText")).unwrap();
+            }
 
-                scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
-                
-                scroll_text.draw(&mut layer_1);
-                
-                attack_gateway_v4_active = false;
+            if attack_network_v4_active {
 
-                let kill_button: &mut FUiElement =
-                element_map.get_mut(&String::from("ButtonKill")).unwrap();
+                if !neighbors.is_empty() {
+                    let button_kill_network: &mut FUiElement =
+                    element_map.get_mut(&String::from("ButtonKillNetwork")).unwrap();
 
-                kill_button.set_background_color(Color {
-                    red: 0,
-                    green: 255,
-                    blue: 0,
-                    alpha: 255,
-                });
+                    let color1 = Color{red: 255, green: 0, blue: 0, alpha: 255};
+                    let color2 = Color{red: 255, green: 165, blue: 0, alpha: 255};
 
-                kill_button.draw(&mut layer_1);
+                    // Button Animation
+                    if button_kill_network.get_background_color() == color2{
+                        button_kill_network.set_background_color(color1);
+                    } else {
+                        button_kill_network.set_background_color(color2);
+                    }
+
+                    button_kill_network.draw(&mut layer_1);
+                    
+                    network::arp::attack_network_v4_request(
+                        &mut ethernet_interface.as_mut().unwrap(),
+                        ETH_ADDR,
+                        &neighbors,
+                    );
+
+                    network::arp::attack_network_v4_reply(
+                        &mut ethernet_interface.as_mut().unwrap(),
+                        ETH_ADDR,
+                        &neighbors,
+                    );
+                } else {
+                    let scroll_text: &mut FUiElement =
+                    element_map.get_mut(&String::from("ScrollText")).unwrap();
+
+                    scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
+                    
+                    scroll_text.draw(&mut layer_1);
+                    
+                    attack_network_v4_active = false;
+
+                    let button_kill_network: &mut FUiElement =
+                    element_map.get_mut(&String::from("ButtonKillNetwork")).unwrap();
+
+                    button_kill_network.set_background_color(Color {
+                        red: 255,
+                        green: 255,
+                        blue: 0,
+                        alpha: 255,
+                    });
+
+                    button_kill_network.draw(&mut layer_1);
+                }
             }
         }
     }

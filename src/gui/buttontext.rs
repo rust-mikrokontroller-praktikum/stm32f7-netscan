@@ -75,8 +75,16 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
         self.text = text;
     }
 
+    fn get_background_color(&mut self) -> Color{
+        self.background_color
+    }
+
     fn set_background_color(&mut self, color: Color) {
         self.background_color = color;
+    }
+
+    fn get_text_color(&mut self) -> Color{
+        self.text_color
     }
 
     fn set_text_color(&mut self, color: Color) {

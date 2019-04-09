@@ -216,7 +216,7 @@ pub fn attack_gateway_v4_request<'b, 'c, 'e, DeviceT>(
         },
     ) {
         Ok(x) => x,
-        Err(x) => println!("ARP Read Error"),
+        Err(_) => (),
     }
 }
 
@@ -270,7 +270,7 @@ pub fn attack_gateway_v4_reply<'b, 'c, 'e, DeviceT>(
         },
     ) {
         Ok(x) => x,
-        Err(x) => println!("ARP Read Error"),
+        Err(_) => (),
     }
 }
 

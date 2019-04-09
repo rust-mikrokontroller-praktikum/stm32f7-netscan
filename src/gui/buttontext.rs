@@ -43,15 +43,6 @@ impl ButtonText {
             },
         }
     }
-
-    //     fn newline(&mut self) {
-    //         self.y_pos += 8;
-    //         self.x_pos = 0;
-    //         if self.y_pos >= HEIGHT {
-    //             self.y_pos = 0;
-    //             self.layer.clear();
-    //         }
-    //     }
 }
 
 impl<T: Framebuffer> UiElement<T> for ButtonText {
@@ -105,12 +96,14 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
         }
 
         let mut temp_x_pos = self.x_pos;
+        let mut temp_y_pos = self.y_pos;
 
         for c in self.text.chars() {
-            // if c == '\n' {
-            //     self.newline();
-            //     continue;
-            // }
+            if c == '\n' {
+                temp_y_pos += 8;
+                temp_x_pos = self.x_pos;
+                continue;
+            }
             match c {
                 ' '..='~' => {
                     let rendered = font8x8::BASIC_FONTS
@@ -123,7 +116,7 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
                             if alpha != 0 {
                                 layer.print_point_color_at(
                                     temp_x_pos + x,
-                                    self.y_pos + y,
+                                    temp_y_pos + y,
                                     self.text_color,
                                 );
                             }

@@ -31,7 +31,7 @@ pub fn listen(
     let mut tries = 0;
     let caps = iface.capabilities();
     loop {
-        let (rx_token, _) = match iface.receive() {
+        let (rx_token, tx_token) = match iface.receive() {
             None => {
                 if tries > 100 {
                     break;
@@ -41,17 +41,11 @@ pub fn listen(
             }
             Some(tokens) => tokens,
         };
-        match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
-            process_eth(gw, &neighbors, eth_addr, &frame, &caps)
-        }) {
-            Ok((x, addr)) => {
+        rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
+            process_eth(gw, &neighbors, eth_addr, &frame, &caps).and_then(|(x, addr)| {
                 *stats.entry(addr).or_insert(1) += 1;
                 if let Some((src, dst, payload, len)) = x {
-                    let tx_token = match iface.transmit() {
-                        Some(x) => x,
-                        None => return Err(String::from("No tx descriptor available")),
-                    };
-                    match dispatch_ethernet(
+                    dispatch_ethernet(
                         eth_addr,
                         tx_token,
                         Instant::from_millis(system_clock::ms() as i64),
@@ -61,16 +55,13 @@ pub fn listen(
                             frame.set_src_addr(src);
                             frame.set_ethertype(EthernetProtocol::Ipv4);
                             frame.payload_mut().copy_from_slice(&payload);
-                        },
-                    ) {
-                        Ok(_) => {}
-                        Err(x) => return Err(x.to_string()),
-                    };
+                        }
+                    )
+                } else {
+                    Ok(())
                 }
-            }
-            Err(::smoltcp::Error::Unrecognized) => {}
-            Err(x) => {}
-        };
+            })
+        }).or_else(|x| { Err(x.to_string()) })?;
     }
     Ok(())
 }
@@ -115,7 +106,7 @@ fn process_eth<'a, T: AsRef<[u8]>>(
             };
 
             if let Some(dst) = dst_addr {
-                Ok(((
+                Ok((
                     Some((
                         eth_frame.src_addr(),
                         *dst,
@@ -123,12 +114,12 @@ fn process_eth<'a, T: AsRef<[u8]>>(
                         eth_frame.payload().len(),
                     )),
                     ipv4_repr.src_addr,
-                )))
+                ))
             } else {
                 Ok((None, ipv4_repr.src_addr))
             }
         }
-        e => Err(::smoltcp::Error::Unrecognized),
+        _ => Err(::smoltcp::Error::Unrecognized),
     }
 }
 

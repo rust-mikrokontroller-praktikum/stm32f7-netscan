@@ -278,7 +278,7 @@ fn main() -> ! {
                             let start_timestamp = Instant::from_millis(system_clock::ms() as i64);
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             println!("Requesting DHCP Address...");
-                            while !got_dhcp {
+                            while !got_dhcp || dhcp.next_poll(Instant::from_millis(system_clock::ms() as i64)) < Duration::from_secs(30) {
                                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
                                 match iface.poll(&mut sockets, timestamp) {
                                     Err(::smoltcp::Error::Exhausted) => {
@@ -321,7 +321,6 @@ fn main() -> ! {
                                     layer_2.clear();
                                     got_dhcp = true;
                                     new_ui_state = UiStates::Start;
-                                    break;
                                 }
                                 if !got_dhcp && timestamp - Duration::from_secs(5) > start_timestamp
                                 {

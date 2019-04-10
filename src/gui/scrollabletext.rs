@@ -100,9 +100,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
     }
 
     fn set_lines_start(&mut self, lines_start: usize) {
-        if lines_start < 0 {
-            println!("lines_start < 0");
-        } else if lines_start > self.lines.len() - (self.y_size / 8 - 1) {
+        if lines_start > self.lines.len() - (self.y_size / 8 - 1) {
             println!("lines_start > lines.len - lines_show");
         } else {
             self.lines_start = lines_start;

@@ -28,6 +28,10 @@ pub trait UiElement<T: Framebuffer>: Any {
         println!("set_lines called for unimplemented struct")
     }
 
+    fn set_lines_no_scroll(&mut self, _lines: Vec<String>) {
+        println!("set_lines_no_scroll called for unimplemented struct")
+    }
+
     fn add_line(&mut self, _line: String) {
         println!("add_line called for unimplemented struct")
     }

@@ -78,6 +78,10 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         self.lines = lines;
     }
 
+    fn set_lines_no_scroll(&mut self, lines: Vec<String>){
+        self.lines = lines
+    }
+
     fn get_background_color(&mut self) -> Color {
         self.background_color
     }

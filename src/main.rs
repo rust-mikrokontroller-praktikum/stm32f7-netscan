@@ -182,8 +182,7 @@ fn main() -> ! {
             if current_button_state {
                 pins.led.toggle();
 
-                // trigger the `EXTI0` interrupt
-                NVIC::pend(Interrupt::EXTI0);
+                layer_2.clear();
             }
 
             previous_button_state = current_button_state;
@@ -846,12 +845,6 @@ fn main() -> ! {
             }
         }
     }
-}
-
-interrupt!(EXTI0, exti0, state: Option<HStdout> = None);
-
-fn exti0(_state: &mut Option<HStdout>) {
-    println!("Interrupt fired! This means that the button was pressed.");
 }
 
 #[exception]

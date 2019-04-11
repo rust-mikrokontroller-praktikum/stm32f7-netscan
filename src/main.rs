@@ -280,7 +280,10 @@ fn main() -> ! {
                             let start_timestamp = Instant::from_millis(system_clock::ms() as i64);
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             println!("Requesting DHCP Address...");
-                            while !got_dhcp || dhcp.next_poll(Instant::from_millis(system_clock::ms() as i64)) < Duration::from_secs(30) {
+                            while !got_dhcp
+                                || dhcp.next_poll(Instant::from_millis(system_clock::ms() as i64))
+                                    < Duration::from_secs(30)
+                            {
                                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
                                 match iface.poll(&mut sockets, timestamp) {
                                     Err(::smoltcp::Error::Exhausted) => {
@@ -484,7 +487,7 @@ fn main() -> ! {
                                     "Scanning for neighbors via ARP solicitations...",
                                 ));
                                 scroll_text.draw(&mut layer_1);
-                                
+
                                 neighbors = match network::arp::get_neighbors_v4(
                                     &mut iface.device,
                                     ETH_ADDR,
@@ -545,7 +548,7 @@ fn main() -> ! {
                         } else if item_ref == "TCP_PROBE" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
-                            
+
                             scroll_text.set_title(String::from("TCP Scan"));
 
                             if !neighbors.is_empty() {
@@ -565,13 +568,13 @@ fn main() -> ! {
                         } else if item_ref == "UDP_PROBE" {
                             let scroll_text: &mut FUiElement =
                                 element_map.get_mut(&String::from("ScrollText")).unwrap();
-                            
+
                             scroll_text.set_title(String::from("UDP Scan"));
 
                             if !neighbors.is_empty() {
                                 scroll_text.set_lines(vec![String::from("Probing neighbors...")]);
                                 scroll_text.draw(&mut layer_1);
-                                
+
                                 let ports = network::udp::probe_addresses(
                                     &mut ethernet_interface.as_mut().unwrap(),
                                     &neighbors,

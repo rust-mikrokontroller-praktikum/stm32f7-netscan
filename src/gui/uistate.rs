@@ -47,14 +47,12 @@ impl UiState {
             String::from("INIT_DHCP"),
             Box::new(ButtonText::new(30, 81, 110, 50, String::from("DHCP"))),
         );
-        elements.insert(
-            String::from("INIT_LISTEN"),
-            Box::new(ButtonText::new(170, 81, 110, 50, String::from("Listen"))),
-        );
+
         elements.insert(
             String::from("INIT_GLOBAL"),
             Box::new(ButtonText::new(310, 81, 110, 50, String::from("Global"))),
         );
+
         elements.insert(
             String::from("INIT_10_0_0_0"),
             Box::new(ButtonText::new(
@@ -65,6 +63,7 @@ impl UiState {
                 String::from("10.0.0.0/8"),
             )),
         );
+
         elements.insert(
             String::from("INIT_172_16_0_0"),
             Box::new(ButtonText::new(
@@ -75,6 +74,7 @@ impl UiState {
                 String::from("172.16.0.0/12"),
             )),
         );
+
         elements.insert(
             String::from("INIT_192_168_0_0"),
             Box::new(ButtonText::new(
@@ -158,7 +158,6 @@ impl UiState {
             draw_items.push(String::from("INIT_ETHERNET"));
         } else if new_ui_state == UiStates::Address {
             draw_items.push(String::from("INIT_DHCP"));
-            draw_items.push(String::from("INIT_LISTEN"));
             draw_items.push(String::from("INIT_GLOBAL"));
 
             draw_items.push(String::from("INIT_10_0_0_0"));

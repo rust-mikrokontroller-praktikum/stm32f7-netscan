@@ -334,37 +334,6 @@ fn main() -> ! {
                                     break;
                                 }
                             }
-                        } else if item_ref == "INIT_LISTEN" {
-                            let iface = &mut ethernet_interface.as_mut().unwrap();
-                            println!("Listening for activity in the local network...");
-                            match network::arp::listen(&mut iface.device, ETH_ADDR) {
-                                Some(cidr) => {
-                                    println!("Setting subnet to {}", cidr.to_string());
-                                    for addr in cidr {
-                                        let s_addr = network::cidr::to_ipv4_address(addr);
-                                        match network::arp::request(
-                                            &mut iface.device,
-                                            ETH_ADDR,
-                                            s_addr,
-                                        ) {
-                                            Ok(x) => {
-                                                if x {
-                                                    new_ui_state = UiStates::Start;
-                                                    network::set_ip4_address(iface, s_addr, 0);
-                                                    layer_2.clear();
-                                                    break;
-                                                }
-                                            }
-                                            Err(e) => println!("Error during ARP request: {}", e),
-                                        }
-                                    }
-                                }
-                                None => {
-                                    println!(
-                                        "No activity in local network, please try again later."
-                                    );
-                                }
-                            }
                         } else if item_ref == "INIT_GLOBAL" {
                             let iface = &mut ethernet_interface.as_mut().unwrap();
                             let cidr = network::cidr::Ipv4Cidr::new(0x01_00_00_00, 0);

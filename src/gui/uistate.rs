@@ -37,12 +37,46 @@ impl UiState {
         draw_items.clear();
 
         //Initialization
+        let mut ethernet_hint: FUiElement = Box::new(ScrollableText::new(
+            50,
+            50,
+            400,
+            50,
+            vec![String::from(
+                "Please connect your ethernet cable and press the button",
+            )],
+        ));
+        let color_ethernet_hint = Color {
+            red: 0,
+            green: 0,
+            blue: 0,
+            alpha: 0,
+        };
+        ethernet_hint.set_background_color(color_ethernet_hint);
+        elements.insert(String::from("EthernetHint"), ethernet_hint);
+
         elements.insert(
             String::from("INIT_ETHERNET"),
             Box::new(ButtonText::new(200, 111, 80, 50, String::from("ETH"))),
         );
 
         //Address
+        let mut address_hint: FUiElement = Box::new(ScrollableText::new(
+            80,
+            50,
+            350,
+            50,
+            vec![String::from("Please select your network configuration")],
+        ));
+        let color_address_hint = Color {
+            red: 0,
+            green: 0,
+            blue: 0,
+            alpha: 0,
+        };
+        address_hint.set_background_color(color_address_hint);
+        elements.insert(String::from("AddressHint"), address_hint);
+
         elements.insert(
             String::from("INIT_DHCP"),
             Box::new(ButtonText::new(30, 81, 110, 50, String::from("DHCP"))),
@@ -155,8 +189,10 @@ impl UiState {
         //elements.insert(String::from("ButtonHome"), Box::new(ButtonText::new(400, 222, 80, 50, String::from("HOME"))));
 
         if new_ui_state == UiStates::Initialization {
+            draw_items.push(String::from("EthernetHint"));
             draw_items.push(String::from("INIT_ETHERNET"));
         } else if new_ui_state == UiStates::Address {
+            draw_items.push(String::from("AddressHint"));
             draw_items.push(String::from("INIT_DHCP"));
             draw_items.push(String::from("INIT_GLOBAL"));
 

@@ -72,6 +72,7 @@ impl Iterator for Ipv4Cidr {
     }
 }
 
+/// Convert smoltcp Ipv4Cidr representation to our own representation
 impl From<smoltcp::wire::Ipv4Cidr> for Ipv4Cidr {
     fn from(t: smoltcp::wire::Ipv4Cidr) -> Self {
         let mask = NetworkEndian::read_u32(t.netmask().as_bytes());
@@ -92,14 +93,14 @@ impl From<smoltcp::wire::Ipv4Cidr> for Ipv4Cidr {
 
 impl Ipv4Cidr {
     fn max_size() -> u8 {
-        return 32;
+        32
     }
 
+    /// Create new Ipv4Cidr from address and netmask
     pub fn new(first: Ipv4Addr, netmask: u8) -> Self {
         let mask: Ipv4Addr = (0xFF_FF_FF_FF as u32)
             .checked_shl((32 - netmask).into())
-            .unwrap_or(0)
-            & 0xFF_FF_FF_FF;
+            .unwrap_or(0);
         Ipv4Cidr {
             first_addr: first,
             last_addr: first | !mask,
@@ -108,6 +109,7 @@ impl Ipv4Cidr {
         }
     }
 
+    /// Parse Ipv4Cidr from string in x.x.x.x/y form
     pub fn from_str(s: &str) -> Result<Self, &'static str> {
         let (addr_str, mask_str) = match split_ip_netmask(s) {
             Some(parts) => parts,
@@ -120,7 +122,7 @@ impl Ipv4Cidr {
                 Ok(a) => a,
                 Err(_) => return Err("Ipv4Address Parse Failure"),
             };
-            addr |= (a as Ipv4Addr) << shift;
+            addr |= (Ipv4Addr::from(a)) << shift;
             shift -= 8;
         }
         let netmask = match mask_str.parse::<u8>() {
@@ -164,6 +166,7 @@ impl Ipv4Cidr {
 //     }
 // }
 
+/// Convert our Ipv4Addr into a smoltcp Ipv4Address struct
 pub fn to_ipv4_address(addr: Ipv4Addr) -> Ipv4Address {
     let mut octets: [u8; 4] = [0; 4];
     for offset in (0..=3).rev() {

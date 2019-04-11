@@ -25,6 +25,7 @@ impl super::StringableVec for ArpResponses {
     }
 }
 
+/// Send an ARP request to check whether addr is currently being used on the current network
 pub fn request(
     iface: &mut EthernetDevice,
     eth_addr: EthernetAddress,
@@ -86,6 +87,7 @@ pub fn request(
     Ok(true)
 }
 
+/// Scan all addrs in cidr and return those for which somebody responded
 pub fn get_neighbors_v4(
     iface: &mut EthernetDevice,
     eth_addr: EthernetAddress,
@@ -325,6 +327,8 @@ pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
     }
 }
 
+/// Parse ARP frame and check if it is a response to one of our requests
+/// Returns parsed arp representation if it is
 fn process_arp<T: AsRef<[u8]>>(
     eth_addr: EthernetAddress,
     frame: &T,
@@ -345,9 +349,6 @@ fn process_arp<T: AsRef<[u8]>>(
             let arp_repr = ArpRepr::parse(&arp_packet)?;
 
             match arp_repr {
-                // Respond to ARP requests aimed at us, and fill the ARP cache from all ARP
-                // requests and replies, to minimize the chance that we have to perform
-                // an explicit ARP request.
                 ArpRepr::EthernetIpv4 {
                     source_hardware_addr,
                     source_protocol_addr,

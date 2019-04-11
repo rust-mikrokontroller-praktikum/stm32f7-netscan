@@ -24,6 +24,7 @@ impl super::StringableVec for IcmpResponses {
     }
 }
 
+/// Iterate over all addresses in addrs and send probe them via ICMP
 pub fn scan_v4<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     rng: &mut random::Rng,
@@ -43,6 +44,8 @@ where
     found_addrs
 }
 
+/// Sends several ICMP ECHO_REQ to addr and listens for corresponding ECHO REPLYs
+/// Returns the duration between the Request and the Reply if a reply is found, None otherwise
 pub fn probe_v4<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     rng: &mut random::Rng,

@@ -10,6 +10,7 @@ use super::arp::ArpResponses;
 use super::services::{Service, UDP_SERVICES};
 use super::{PortScan, PortScans};
 
+/// Starts a udp port scan for every address in addrs
 pub fn probe_addresses<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     addrs: &ArpResponses,
@@ -30,6 +31,7 @@ where
         let mut iter_done = false;
         while !iter_done {
             let mut sockets = SocketSet::new(Vec::new());
+            // Limit amount of sockets to open simultaneously to prevent OOM
             for i in 0..10 {
                 let udp_rx_buffer =
                     UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY], vec![0; 64]);
@@ -61,6 +63,7 @@ where
                 );
                 socket_count += 1;
             }
+            // Poll sockets until connection is established or they time out
             while socket_count > 0 {
                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
                 match iface.poll(&mut sockets, timestamp) {

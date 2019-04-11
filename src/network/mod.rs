@@ -51,6 +51,8 @@ impl super::StringableVec for PortScans {
         ret
     }
 }
+
+/// Set device IPv4 Address
 pub fn set_ip4_address<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     addr: Ipv4Address,

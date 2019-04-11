@@ -9,6 +9,7 @@ use super::arp::ArpResponses;
 use super::services::{Service, TCP_SERVICES};
 use super::{PortScan, PortScans};
 
+/// Starts a tcp port scan for every address in addrs
 pub fn probe_addresses<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     addrs: &ArpResponses,
@@ -28,6 +29,7 @@ where
         let mut iter_done = false;
         while !iter_done {
             let mut sockets = SocketSet::new(Vec::new());
+            // Limit amount of sockets to open simultaneously to prevent OOM
             for i in 0..10 {
                 let tcp_rx_buffer = TcpSocketBuffer::new(vec![0; 64]);
                 let tcp_tx_buffer = TcpSocketBuffer::new(vec![0; 128]);
@@ -56,6 +58,7 @@ where
                 );
                 socket_count += 1;
             }
+            // Poll sockets until connection is established or they time out
             while socket_count > 0 {
                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
                 match iface.poll(&mut sockets, timestamp) {

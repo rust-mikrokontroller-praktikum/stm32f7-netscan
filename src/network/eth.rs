@@ -37,6 +37,7 @@ pub fn listen(
     let mut tries = 0;
     let caps = iface.capabilities();
     loop {
+        // Try to receive all packets currently in the buffer
         let (rx_token, tx_token) = match iface.receive() {
             None => {
                 if tries > 100 {
@@ -50,8 +51,11 @@ pub fn listen(
         rx_token
             .consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
                 let timestamp = Instant::from_millis(system_clock::ms() as i64);
+                // Parse the raw ethernet frame and return the info necessary for a
+                // response/forward
                 process_eth(gw, &neighbors, eth_addr, &frame, &caps).and_then(
                     |(x, (addr, bytes))| {
+                        // Collect statistics on received packets
                         stats
                             .entry(addr)
                             .and_modify(|(count, total_bytes, _)| {
@@ -60,6 +64,7 @@ pub fn listen(
                             })
                             .or_insert((1, bytes, timestamp));
                         if let Some((ethertype, dst, payload, len)) = x {
+                            // Dispatch returned packet
                             dispatch_ethernet(
                                 eth_addr,
                                 tx_token,
@@ -151,6 +156,7 @@ fn process_eth<'a, T: AsRef<[u8]>>(
             } = arp_repr
             {
                 if operation == ArpOperation::Request {
+                    // Respond to ARP request
                     let arp = ArpRepr::EthernetIpv4 {
                         operation: ArpOperation::Reply,
                         source_hardware_addr: eth_addr,
@@ -176,6 +182,7 @@ fn process_eth<'a, T: AsRef<[u8]>>(
                 Err(::smoltcp::Error::Unrecognized)
             }
         }
+        // Ignore non ipv4 traffic
         _ => Err(::smoltcp::Error::Unrecognized),
     }
 }

@@ -25,6 +25,7 @@ impl super::StringableVec for StatsResponses {
                     (*bytes as i64) / (now_s - ts.secs())
                 ));
             }
+            ret.push(String::from(""));
         }
         ret
     }

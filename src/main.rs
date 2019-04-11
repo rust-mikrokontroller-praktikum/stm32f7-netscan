@@ -22,7 +22,7 @@ extern crate smoltcp;
 use gui::fuielement::FUiElement;
 use gui::uistate::UiState;
 use gui::uistates::UiStates;
-use network::{Stringable, StringableVec};
+use network::StringableVec;
 
 use alloc::collections::btree_map::BTreeMap;
 use alloc::string::String;
@@ -38,19 +38,17 @@ use rt::{entry, exception, ExceptionFrame};
 use sh::hio::{self, HStdout};
 use smoltcp::{
     dhcp::Dhcpv4Client,
-    iface::{EthernetInterface, Route},
     socket::{Socket, SocketSet, UdpPacketMetadata, UdpSocketBuffer},
     time::{Duration, Instant},
-    wire::{EthernetAddress, IpAddress, IpCidr, Ipv4Address},
+    wire::{EthernetAddress, IpCidr, Ipv4Address},
 };
 use stm32f7::stm32f7x6::{CorePeripherals, Interrupt, Peripherals};
 use stm32f7_discovery::{
     ethernet,
     gpio::{GpioPort, InputPin, OutputPin},
     init,
-    lcd::{self, Color, Framebuffer, Layer},
+    lcd::{self, Color},
     random::Rng,
-    sd,
     system_clock::{self, Hz},
     touch,
 };
@@ -121,8 +119,6 @@ fn main() -> ! {
 
     // Initialize the allocator BEFORE you use it
     unsafe { ALLOCATOR.init(rt::heap_start() as usize, HEAP_SIZE) }
-
-    let _xs = vec![1, 2, 3];
 
     let mut i2c_3 = init::init_i2c_3(peripherals.I2C3, &mut rcc);
     i2c_3.test_1();

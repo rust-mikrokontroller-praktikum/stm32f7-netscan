@@ -681,7 +681,21 @@ fn main() -> ! {
                 &neighbors,
                 gateway,
             ) {
-                Ok(_) => scroll_text.set_lines(traffic_stats.to_string_vec()),
+                Ok(_) => {
+                    scroll_text.set_lines(traffic_stats.to_string_vec());
+
+                    let overall_stats: (usize, usize, usize) = (0, 0, 0);
+                    for traffic_stat in traffic_stats {
+                        let traffic_stat_single = traffic_stat.1;
+                        overall_stats.0 += traffic_stat_single.0;
+                        overall_stats.1 += traffic_stat_single.1;
+                        overall_stats.2 += traffic_stat_single.2;
+                    }
+                    
+                    scroll_text.add_line(format!("{} packets", overall_stats.0));
+                    scroll_text.add_line(format!("{} bytes", overall_stats.1));
+                    scroll_text.add_line(format!("{} bytes / second", overall_stats.2));
+                },
                 Err(x) => scroll_text.add_line(format!("Error during processing: {}", x)),
             }
         }
@@ -719,6 +733,7 @@ fn main() -> ! {
                     .unwrap()
                     .draw(&mut layer_1);
             }
+
             if attack_gateway_v4_active {
                 let button_kill_gateway: &mut FUiElement = element_map
                     .get_mut(&String::from("ButtonKillGateway"))

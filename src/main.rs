@@ -452,6 +452,11 @@ fn main() -> ! {
                                 scroll_text.draw(&mut layer_1);
                             }
                         } else if item_ref == "TRAFFIC" {
+                            let scroll_text: &mut FUiElement =
+                                element_map.get_mut(&String::from("ScrollText")).unwrap();
+
+                            scroll_text.set_title(String::from("Traffic"));
+
                             let stats_button: &mut FUiElement =
                                 element_map.get_mut(&String::from("TRAFFIC")).unwrap();
                             let color1 = Color {

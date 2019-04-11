@@ -32,13 +32,13 @@ use alloc_cortex_m::CortexMHeap;
 use core::alloc::Layout as AllocLayout;
 use core::fmt::Write;
 use core::panic::PanicInfo;
-use cortex_m::{asm, interrupt, peripheral::NVIC};
+use cortex_m::{asm, interrupt};
 use managed::ManagedSlice;
 use rt::{entry, exception, ExceptionFrame};
-use sh::hio::{self, HStdout};
+use sh::hio;
 use smoltcp::{
     dhcp::Dhcpv4Client,
-    socket::{Socket, SocketSet, UdpPacketMetadata, UdpSocketBuffer},
+    socket::{SocketSet, UdpPacketMetadata, UdpSocketBuffer},
     time::{Duration, Instant},
     wire::{EthernetAddress, IpCidr, Ipv4Address},
 };

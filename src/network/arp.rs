@@ -25,39 +25,6 @@ impl super::StringableVec for ArpResponses {
     }
 }
 
-pub fn listen(
-    iface: &mut EthernetDevice,
-    eth_addr: EthernetAddress,
-) -> Option<super::cidr::Ipv4Cidr> {
-    let mut tries = 0;
-    let mut addrs = Vec::<Ipv4Address>::new();
-    loop {
-        let (rx_token, _) = match iface.receive() {
-            None => {
-                if tries > 100 {
-                    break;
-                }
-                tries += 1;
-                continue;
-            }
-            Some(tokens) => tokens,
-        };
-        match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
-            process_arp(eth_addr, &frame)
-        }) {
-            Ok(ArpRepr::EthernetIpv4 {
-                source_protocol_addr,
-                ..
-            }) => addrs.push(source_protocol_addr),
-            Ok(_) => {}
-            Err(::smoltcp::Error::Unrecognized) => {}
-            Err(_) => {}
-        };
-        system_clock::wait_ms(10);
-    }
-    None
-}
-
 pub fn request(
     iface: &mut EthernetDevice,
     eth_addr: EthernetAddress,

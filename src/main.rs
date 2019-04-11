@@ -618,31 +618,38 @@ fn main() -> ! {
                                 scroll_text.draw(&mut layer_1);
                             }
                         } else if item_ref == "ButtonKillNetwork" {
-                            let button_kill_network: &mut FUiElement = element_map
-                                .get_mut(&String::from("ButtonKillNetwork"))
-                                .unwrap();
+                            if !neighbors.is_empty() {
+                                let button_kill_network: &mut FUiElement = element_map
+                                    .get_mut(&String::from("ButtonKillNetwork"))
+                                    .unwrap();
 
-                            if !attack_network_v4_active {
-                                button_kill_network.set_background_color(Color {
-                                    red: 255,
-                                    green: 0,
-                                    blue: 0,
-                                    alpha: 255,
-                                });
+                                if !attack_network_v4_active {
+                                    button_kill_network.set_background_color(Color {
+                                        red: 255,
+                                        green: 0,
+                                        blue: 0,
+                                        alpha: 255,
+                                    });
 
-                                attack_network_v4_active = true;
+                                    attack_network_v4_active = true;
+                                } else {
+                                    button_kill_network.set_background_color(Color {
+                                        red: 255,
+                                        green: 255,
+                                        blue: 0,
+                                        alpha: 255,
+                                    });
+
+                                    attack_network_v4_active = false;
+                                }
+
+                                button_kill_network.draw(&mut layer_1);
                             } else {
-                                button_kill_network.set_background_color(Color {
-                                    red: 255,
-                                    green: 255,
-                                    blue: 0,
-                                    alpha: 255,
-                                });
-
-                                attack_network_v4_active = false;
+                                let scroll_text: &mut FUiElement =
+                                    element_map.get_mut(&String::from("ScrollText")).unwrap();
+                                scroll_text.add_line(String::from("No valid neighbors to attack"));
+                                scroll_text.draw(&mut layer_1);
                             }
-
-                            button_kill_network.draw(&mut layer_1);
                         }
                     }
                 }
@@ -811,37 +818,17 @@ fn main() -> ! {
             }
 
             if attack_network_v4_active {
-                if !neighbors.is_empty() {
-                    network::arp::attack_network_v4_request(
-                        &mut ethernet_interface.as_mut().unwrap(),
-                        ETH_ADDR,
-                        &neighbors,
-                    );
+                network::arp::attack_network_v4_request(
+                    &mut ethernet_interface.as_mut().unwrap(),
+                    ETH_ADDR,
+                    &neighbors,
+                );
 
-                    network::arp::attack_network_v4_reply(
-                        &mut ethernet_interface.as_mut().unwrap(),
-                        ETH_ADDR,
-                        &neighbors,
-                    );
-                } else {
-                    let scroll_text: &mut FUiElement =
-                        element_map.get_mut(&String::from("ScrollText")).unwrap();
-                    scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
-                    scroll_text.draw(&mut layer_1);
-                    attack_network_v4_active = false;
-                    let button_kill_network: &mut FUiElement = element_map
-                        .get_mut(&String::from("ButtonKillNetwork"))
-                        .unwrap();
-
-                    button_kill_network.set_background_color(Color {
-                        red: 255,
-                        green: 255,
-                        blue: 0,
-                        alpha: 255,
-                    });
-
-                    button_kill_network.draw(&mut layer_1);
-                }
+                network::arp::attack_network_v4_reply(
+                    &mut ethernet_interface.as_mut().unwrap(),
+                    ETH_ADDR,
+                    &neighbors,
+                );
             }
         }
     }

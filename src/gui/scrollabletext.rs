@@ -78,7 +78,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         self.lines = lines;
     }
 
-    fn set_lines_no_scroll(&mut self, lines: Vec<String>){
+    fn set_lines_no_scroll(&mut self, lines: Vec<String>) {
         self.lines = lines
     }
 

@@ -162,6 +162,7 @@ fn main() -> ! {
     // ethernet
     // let mut ethernet_interface: Option<EthernetInterface<'b, 'c, 'e, DeviceT>> = None;
     let mut ethernet_interface = None;
+    let mut gateway = None;
     let mut neighbors = network::arp::ArpResponses::new();
     let mut traffic_stats = network::eth::StatsResponses::new();
     let mut got_dhcp = false;
@@ -171,6 +172,7 @@ fn main() -> ! {
     // Set the default Touch State
     let mut previous_touch_state = false;
 
+    let mut interval_count = usize::max_value() - 1;
     let mut attack_gateway_v4_active = false;
     let mut attack_network_v4_active = false;
     let mut traffic_stats_active = false;
@@ -312,6 +314,7 @@ fn main() -> ! {
                                     match x.router {
                                         Some(gw) => {
                                             iface.routes_mut().add_default_ipv4_route(gw).unwrap();
+                                            gateway = Some(gw);
                                         }
                                         None => println!("DHCP Response without default route"),
                                     };
@@ -691,18 +694,7 @@ fn main() -> ! {
         }
 
         if traffic_stats_active {
-            let mut gateway = None;
             let iface = ethernet_interface.as_mut().unwrap();
-            iface.routes_mut().update(|routes_map| {
-                routes_map
-                    .get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
-                    .map(|default_route| {
-                        //gateway = default_route.via_router;
-                        if let IpAddress::Ipv4(x) = default_route.via_router {
-                            gateway = Some(x)
-                        }
-                    });
-            });
             let scroll_text: &mut FUiElement =
                 element_map.get_mut(&String::from("ScrollText")).unwrap();
             match network::eth::listen(
@@ -717,7 +709,9 @@ fn main() -> ! {
             }
         }
 
-        if system_clock::ticks() % 100 == 0 {
+        let ticks = system_clock::ticks();
+        if ticks % 100 == 0 {
+            interval_count += 1;
             if traffic_stats_active {
                 {
                     let stats_button: &mut FUiElement =
@@ -774,7 +768,40 @@ fn main() -> ! {
                 }
 
                 button_kill_gateway.draw(&mut layer_1);
+            }
 
+            if attack_network_v4_active {
+                let button_kill_network: &mut FUiElement = element_map
+                    .get_mut(&String::from("ButtonKillNetwork"))
+                    .unwrap();
+
+                let color1 = Color {
+                    red: 255,
+                    green: 0,
+                    blue: 0,
+                    alpha: 255,
+                };
+                let color2 = Color {
+                    red: 255,
+                    green: 165,
+                    blue: 0,
+                    alpha: 255,
+                };
+
+                // Button Animation
+                if button_kill_network.get_background_color() == color2 {
+                    button_kill_network.set_background_color(color1);
+                } else {
+                    button_kill_network.set_background_color(color2);
+                }
+
+                button_kill_network.draw(&mut layer_1);
+            }
+        }
+
+        if interval_count >= 10 {
+            interval_count = 0;
+            if attack_gateway_v4_active {
                 network::arp::attack_gateway_v4_request(
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
@@ -788,32 +815,6 @@ fn main() -> ! {
 
             if attack_network_v4_active {
                 if !neighbors.is_empty() {
-                    let button_kill_network: &mut FUiElement = element_map
-                        .get_mut(&String::from("ButtonKillNetwork"))
-                        .unwrap();
-
-                    let color1 = Color {
-                        red: 255,
-                        green: 0,
-                        blue: 0,
-                        alpha: 255,
-                    };
-                    let color2 = Color {
-                        red: 255,
-                        green: 165,
-                        blue: 0,
-                        alpha: 255,
-                    };
-
-                    // Button Animation
-                    if button_kill_network.get_background_color() == color2 {
-                        button_kill_network.set_background_color(color1);
-                    } else {
-                        button_kill_network.set_background_color(color2);
-                    }
-
-                    button_kill_network.draw(&mut layer_1);
-
                     network::arp::attack_network_v4_request(
                         &mut ethernet_interface.as_mut().unwrap(),
                         ETH_ADDR,
@@ -828,13 +829,9 @@ fn main() -> ! {
                 } else {
                     let scroll_text: &mut FUiElement =
                         element_map.get_mut(&String::from("ScrollText")).unwrap();
-
                     scroll_text.set_lines(vec![String::from("No valid neighbors to attack")]);
-
                     scroll_text.draw(&mut layer_1);
-
                     attack_network_v4_active = false;
-
                     let button_kill_network: &mut FUiElement = element_map
                         .get_mut(&String::from("ButtonKillNetwork"))
                         .unwrap();

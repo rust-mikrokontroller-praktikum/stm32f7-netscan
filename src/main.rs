@@ -13,7 +13,6 @@ extern crate alloc_cortex_m;
 extern crate cortex_m;
 extern crate cortex_m_rt as rt;
 extern crate cortex_m_semihosting as sh;
-#[macro_use]
 extern crate stm32f7;
 #[macro_use]
 extern crate stm32f7_discovery;
@@ -286,7 +285,7 @@ fn main() -> ! {
                                     }
                                     Err(::smoltcp::Error::Unrecognized) => print!("U"),
                                     Err(e) => println!("Network error: {:?}", e),
-                                    Ok(_) => { },
+                                    Ok(_) => {}
                                 }
 
                                 let config = dhcp
@@ -614,7 +613,9 @@ fn main() -> ! {
                             } else {
                                 let scroll_text: &mut FUiElement =
                                     element_map.get_mut(&String::from("ScrollText")).unwrap();
-                                scroll_text.add_line(String::from("No gateway to attack, try attacking neighbors instead"));
+                                scroll_text.add_line(String::from(
+                                    "No gateway to attack, try attacking neighbors instead",
+                                ));
                                 scroll_text.draw(&mut layer_1);
                             }
                         } else if item_ref == "ButtonKillNetwork" {
@@ -807,13 +808,13 @@ fn main() -> ! {
                 network::arp::attack_gateway_v4_request(
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
-                    gateway.unwrap()
+                    gateway.unwrap(),
                 );
 
                 network::arp::attack_gateway_v4_reply(
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
-                    gateway.unwrap()
+                    gateway.unwrap(),
                 );
             }
 

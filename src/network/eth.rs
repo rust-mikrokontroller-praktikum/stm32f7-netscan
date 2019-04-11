@@ -20,7 +20,10 @@ impl super::StringableVec for StatsResponses {
             ret.push(format!("    {} packets", count));
             ret.push(format!("    {} bytes", bytes));
             if now_s > ts.secs() {
-                ret.push(format!("    {} bytes / second", (*bytes as i64) / (now_s - ts.secs())));
+                ret.push(format!(
+                    "    {} bytes / second",
+                    (*bytes as i64) / (now_s - ts.secs())
+                ));
             }
         }
         ret
@@ -65,18 +68,12 @@ pub fn listen(
                             .or_insert((1, bytes, timestamp));
                         if let Some((ethertype, dst, payload, len)) = x {
                             // Dispatch returned packet
-                            dispatch_ethernet(
-                                eth_addr,
-                                tx_token,
-                                timestamp,
-                                len,
-                                |mut frame| {
-                                    frame.set_dst_addr(dst);
-                                    // frame.set_src_addr(eth_addr);
-                                    frame.set_ethertype(ethertype);
-                                    frame.payload_mut().copy_from_slice(&payload);
-                                },
-                            )
+                            dispatch_ethernet(eth_addr, tx_token, timestamp, len, |mut frame| {
+                                frame.set_dst_addr(dst);
+                                // frame.set_src_addr(eth_addr);
+                                frame.set_ethertype(ethertype);
+                                frame.payload_mut().copy_from_slice(&payload);
+                            })
                         } else {
                             Ok(())
                         }

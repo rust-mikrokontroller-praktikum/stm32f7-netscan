@@ -203,7 +203,8 @@ pub fn attack_gateway_v4_request<'b, 'c, 'e, DeviceT>(
             let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
             arp_reqest.emit(&mut packet);
         },
-    ).unwrap_or(());
+    )
+    .unwrap_or(());
 }
 
 pub fn attack_network_v4_request<'b, 'c, 'e, DeviceT>(
@@ -243,7 +244,8 @@ pub fn attack_network_v4_request<'b, 'c, 'e, DeviceT>(
                 let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
                 arp_reqest.emit(&mut packet);
             },
-        ).unwrap_or(());
+        )
+        .unwrap_or(());
     }
 }
 
@@ -283,7 +285,8 @@ pub fn attack_gateway_v4_reply<'b, 'c, 'e, DeviceT>(
             let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
             arp_reply.emit(&mut packet);
         },
-    ).unwrap_or(());
+    )
+    .unwrap_or(());
 }
 
 pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
@@ -323,7 +326,8 @@ pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
                 let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
                 arp_reply.emit(&mut packet);
             },
-        ).unwrap_or(());
+        )
+        .unwrap_or(());
     }
 }
 

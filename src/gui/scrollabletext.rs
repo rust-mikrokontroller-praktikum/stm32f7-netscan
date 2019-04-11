@@ -13,6 +13,7 @@ pub struct ScrollableText {
     title: String,
     lines: Vec<String>,
     lines_start: usize,
+    autoscroll: bool,
     background_color: Color,
     text_color: Color,
 }
@@ -33,6 +34,7 @@ impl ScrollableText {
             title: String::from(""),
             lines: lines,
             lines_start: 0,
+            autoscroll: false,
             background_color: Color {
                 red: 0,
                 green: 255,
@@ -93,10 +95,18 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
 
     fn add_line(&mut self, line: String) {
         self.lines.push(line);
+
+        if self.autoscroll && self.lines.len() > ((self.y_size / 8) - 1) {
+            self.lines_start += 1;
+        }
     }
 
     fn add_lines(&mut self, mut lines: Vec<String>) {
         self.lines.append(&mut lines);
+
+        if self.autoscroll && self.lines.len() > ((self.y_size / 8) - 1) {
+            self.lines_start += lines.len();
+        }
     }
 
     fn set_lines_start(&mut self, lines_start: usize) {

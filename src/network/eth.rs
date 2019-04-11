@@ -8,16 +8,20 @@ use stm32f7_discovery::{ethernet::EthernetDevice, system_clock};
 
 use super::arp::ArpResponses;
 
-pub type StatsResponses = BTreeMap<Ipv4Address, (usize, usize)>;
+pub type StatsResponses = BTreeMap<Ipv4Address, (usize, usize, Instant)>;
 
 impl super::StringableVec for StatsResponses {
     fn to_string_vec(&self) -> Vec<String> {
         let mut ret: Vec<String> = Vec::new();
+        let now_s = Instant::from_millis(system_clock::ms() as i64).secs();
         for i in self.iter() {
             ret.push(format!("{}:", i.0));
-            let (count, bytes) = i.1;
+            let (count, bytes, ts) = i.1;
             ret.push(format!("    {} packets", count));
             ret.push(format!("    {} bytes", bytes));
+            if now_s > ts.secs() {
+                ret.push(format!("    {} bytes / second", (*bytes as i64) / (now_s - ts.secs())));
+            }
         }
         ret
     }
@@ -45,20 +49,21 @@ pub fn listen(
         };
         rx_token
             .consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
+                let timestamp = Instant::from_millis(system_clock::ms() as i64);
                 process_eth(gw, &neighbors, eth_addr, &frame, &caps).and_then(
                     |(x, (addr, bytes))| {
                         stats
                             .entry(addr)
-                            .and_modify(|(count, total_bytes)| {
+                            .and_modify(|(count, total_bytes, _)| {
                                 *count += 1;
                                 *total_bytes += bytes
                             })
-                            .or_insert((1, bytes));
+                            .or_insert((1, bytes, timestamp));
                         if let Some((ethertype, dst, payload, len)) = x {
                             dispatch_ethernet(
                                 eth_addr,
                                 tx_token,
-                                Instant::from_millis(system_clock::ms() as i64),
+                                timestamp,
                                 len,
                                 |mut frame| {
                                     frame.set_dst_addr(dst);

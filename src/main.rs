@@ -684,13 +684,21 @@ fn main() -> ! {
                 Ok(_) => {
                     scroll_text.set_lines(traffic_stats.to_string_vec());
 
-                    let overall_stats: (usize, usize, usize) = (0, 0, 0);
-                    for traffic_stat in traffic_stats {
+                    let mut overall_stats: (usize, usize, i64) = (0, 0, 0);
+                    let now_s = Instant::from_millis(system_clock::ms() as i64).secs();
+                    
+                    for traffic_stat in traffic_stats.iter() {
                         let traffic_stat_single = traffic_stat.1;
                         overall_stats.0 += traffic_stat_single.0;
                         overall_stats.1 += traffic_stat_single.1;
-                        overall_stats.2 += traffic_stat_single.2;
+                        if now_s > traffic_stat_single.2.secs() {
+                            overall_stats.2 += (traffic_stat_single.1 as i64) / (now_s - traffic_stat_single.2.secs());
+                        }
                     }
+
+                    scroll_text.add_line(String::from(""));
+                    scroll_text.add_line(String::from("Overall"));
+
                     
                     scroll_text.add_line(format!("{} packets", overall_stats.0));
                     scroll_text.add_line(format!("{} bytes", overall_stats.1));

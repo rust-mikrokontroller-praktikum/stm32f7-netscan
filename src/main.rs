@@ -686,7 +686,7 @@ fn main() -> ! {
                 gateway,
             ) {
                 Ok(_) => {
-                    scroll_text.set_lines(traffic_stats.to_string_vec());
+                    scroll_text.set_lines_no_scroll(traffic_stats.to_string_vec());
 
                     let mut overall_stats: (usize, usize, i64) = (0, 0, 0);
                     let now_s = Instant::from_millis(system_clock::ms() as i64).secs();

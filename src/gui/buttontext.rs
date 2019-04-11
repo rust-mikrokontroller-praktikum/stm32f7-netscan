@@ -4,6 +4,7 @@ use stm32f7_discovery::lcd::Color;
 use stm32f7_discovery::lcd::Framebuffer;
 use stm32f7_discovery::lcd::Layer;
 
+// A Button
 pub struct ButtonText {
     x_pos: usize,
     y_pos: usize,
@@ -86,9 +87,11 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
     //     (self.touch)()
     // }
 
+    // Draws the element on the given layer
     fn draw(&mut self, layer: &mut Layer<T>) {
         use font8x8::{self, UnicodeFonts};
 
+        // Draw the background color
         for x in self.x_pos..self.x_pos + self.x_size {
             for y in self.y_pos..self.y_pos + self.y_size {
                 layer.print_point_color_at(x, y, self.background_color);
@@ -98,12 +101,15 @@ impl<T: Framebuffer> UiElement<T> for ButtonText {
         let mut temp_x_pos = self.x_pos;
         let mut temp_y_pos = self.y_pos;
 
+        // Draw the characters
         for c in self.text.chars() {
+            // New Line
             if c == '\n' {
                 temp_y_pos += 8;
                 temp_x_pos = self.x_pos;
                 continue;
             }
+
             match c {
                 ' '..='~' => {
                     let rendered = font8x8::BASIC_FONTS

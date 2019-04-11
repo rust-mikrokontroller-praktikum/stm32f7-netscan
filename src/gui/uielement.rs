@@ -20,23 +20,23 @@ pub trait UiElement<T: Framebuffer>: Any {
 
     fn draw(&mut self, layer: &mut Layer<T>);
 
-    fn set_text(&mut self, text: String) {
+    fn set_text(&mut self, _text: String) {
         println!("set_text called for unimplemented struct")
     }
 
-    fn set_lines(&mut self, lines: Vec<String>) {
+    fn set_lines(&mut self, _lines: Vec<String>) {
         println!("set_lines called for unimplemented struct")
     }
 
-    fn add_line(&mut self, line: String) {
+    fn add_line(&mut self, _line: String) {
         println!("add_line called for unimplemented struct")
     }
 
-    fn add_lines(&mut self, mut lines: Vec<String>) {
+    fn add_lines(&mut self, mut _lines: Vec<String>) {
         println!("add_lines called for unimplemented struct")
     }
 
-    fn set_lines_start(&mut self, lines_start: usize) {
+    fn set_lines_start(&mut self, _lines_start: usize) {
         println!("set_lines_start called for unimplemented struct")
     }
 
@@ -45,7 +45,7 @@ pub trait UiElement<T: Framebuffer>: Any {
         0
     }
 
-    fn set_title(&mut self, title: String) {
+    fn set_title(&mut self, _title: String) {
         println!("set_title called for unimplemented struct");
     }
 

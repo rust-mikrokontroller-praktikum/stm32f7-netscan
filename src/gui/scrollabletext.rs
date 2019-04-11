@@ -5,6 +5,7 @@ use stm32f7_discovery::lcd::Color;
 use stm32f7_discovery::lcd::Framebuffer;
 use stm32f7_discovery::lcd::Layer;
 
+// A scrollable Text Box
 pub struct ScrollableText {
     x_pos: usize,
     y_pos: usize,
@@ -109,6 +110,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         }
     }
 
+    // Set the first line that is drawn
     fn set_lines_start(&mut self, lines_start: usize) {
         if lines_start > self.lines.len() - (self.y_size / 8 - 1) {
             println!("lines_start > lines.len - lines_show");
@@ -132,9 +134,11 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
     // fn run_touch_func(&mut self){
     // }
 
+    // Draws the element on the given layer
     fn draw(&mut self, layer: &mut Layer<T>) {
         use font8x8::{self, UnicodeFonts};
 
+        // Draw the background
         for x in self.x_pos..self.x_pos + self.x_size {
             for y in self.y_pos..self.y_pos + self.y_size {
                 layer.print_point_color_at(x, y, self.background_color);
@@ -148,6 +152,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
 
         //println!("Number of lines {}", lines_split.len());
 
+        // Draw the title of the box
         for c in self.title.chars() {
             match c {
                 ' '..='~' => {
@@ -173,14 +178,19 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
         temp_x_pos = self.x_pos;
         temp_y_pos += 8;
 
+        // Draw the lines
         for line in self.lines.iter() {
             if count_lines_start < self.lines_start {
+                // Skip lines until the start line is reached
                 //println!("Skip line");
             } else if count_lines_show >= ((self.y_size / 8) - 1) {
+                // No more free lines
                 //println!("End line");
                 break;
             } else {
+                // Draw the characters
                 for c in line.chars() {
+                    // New line
                     if c == '\n' {
                         temp_y_pos += 8;
                         temp_x_pos = self.x_pos;
@@ -210,6 +220,7 @@ impl<T: Framebuffer> UiElement<T> for ScrollableText {
                     }
                     temp_x_pos += 8;
 
+                    // New line if the line is full
                     if temp_x_pos >= (self.x_pos + self.x_size - 8) {
                         temp_y_pos += 8;
                         temp_x_pos = self.x_pos;

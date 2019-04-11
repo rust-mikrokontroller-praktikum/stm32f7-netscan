@@ -1,7 +1,6 @@
 use super::buttontext::ButtonText;
 use super::fuielement::FUiElement;
 use super::scrollabletext::ScrollableText;
-use super::uielement::UiElement;
 use super::uistates::UiStates;
 use alloc::boxed::Box;
 use alloc::collections::btree_map::BTreeMap;
@@ -16,16 +15,19 @@ pub struct UiState {
 }
 
 impl UiState {
+    // Create a new UIState
     pub fn new() -> UiState {
         UiState {
             current_ui_state: UiStates::Initialization,
         }
     }
 
+    // Return the current UIState
     pub fn get_ui_state(&mut self) -> UiStates {
         self.current_ui_state
     }
 
+    // Change the current UIState
     pub fn change_ui_state(
         &mut self,
         layer: &mut Layer<FramebufferArgb8888>,

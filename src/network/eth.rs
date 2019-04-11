@@ -1,4 +1,3 @@
-use super::cidr;
 use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -48,7 +47,7 @@ pub fn listen(
             .consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
                 process_eth(gw, &neighbors, eth_addr, &frame, &caps).and_then(
                     |(x, (addr, bytes))| {
-                        *stats
+                        stats
                             .entry(addr)
                             .and_modify(|(count, total_bytes)| {
                                 *count += 1;
@@ -56,7 +55,6 @@ pub fn listen(
                             })
                             .or_insert((1, bytes));
                         if let Some((ethertype, dst, payload, len)) = x {
-                            // *stats.entry(Ipv4Address::new(8, 8, 8, 8)).or_insert(1) += 1;
                             dispatch_ethernet(
                                 eth_addr,
                                 tx_token,
@@ -70,7 +68,6 @@ pub fn listen(
                                 },
                             )
                         } else {
-                            // *stats.entry(Ipv4Address::new(8, 8, 4, 4)).or_insert(1) += 1;
                             Ok(())
                         }
                     },
@@ -192,7 +189,7 @@ where
     let tx_len = EthernetFrame::<&[u8]>::buffer_len(buffer_len);
     tx_token.consume(timestamp, tx_len, |tx_buffer| {
         debug_assert!(tx_buffer.as_ref().len() == tx_len);
-        let mut frame = EthernetFrame::new_unchecked(tx_buffer.as_mut());
+        let mut frame = EthernetFrame::new_unchecked(tx_buffer);
         frame.set_src_addr(eth_addr);
 
         f(frame);

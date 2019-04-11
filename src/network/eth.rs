@@ -9,13 +9,16 @@ use stm32f7_discovery::{ethernet::EthernetDevice, system_clock};
 
 use super::arp::ArpResponses;
 
-pub type StatsResponses = BTreeMap<Ipv4Address, usize>;
+pub type StatsResponses = BTreeMap<Ipv4Address, (usize, usize)>;
 
 impl super::StringableVec for StatsResponses {
     fn to_string_vec(&self) -> Vec<String> {
         let mut ret: Vec<String> = Vec::new();
         for i in self.iter() {
-            ret.push(format!("{} ({})", i.0, i.1));
+            ret.push(format!("{}:", i.0));
+            let (count, bytes) = i.1;
+            ret.push(format!("    {} packets", count));
+            ret.push(format!("    {} bytes", bytes));
         }
         ret
     }
@@ -43,27 +46,35 @@ pub fn listen(
         };
         rx_token
             .consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
-                process_eth(gw, &neighbors, eth_addr, &frame, &caps).and_then(|(x, addr)| {
-                    *stats.entry(addr).or_insert(1) += 1;
-                    if let Some((ethertype, dst, payload, len)) = x {
-                        // *stats.entry(Ipv4Address::new(8, 8, 8, 8)).or_insert(1) += 1;
-                        dispatch_ethernet(
-                            eth_addr,
-                            tx_token,
-                            Instant::from_millis(system_clock::ms() as i64),
-                            len,
-                            |mut frame| {
-                                frame.set_dst_addr(dst);
-                                // frame.set_src_addr(eth_addr);
-                                frame.set_ethertype(ethertype);
-                                frame.payload_mut().copy_from_slice(&payload);
-                            },
-                        )
-                    } else {
-                        // *stats.entry(Ipv4Address::new(8, 8, 4, 4)).or_insert(1) += 1;
-                        Ok(())
-                    }
-                })
+                process_eth(gw, &neighbors, eth_addr, &frame, &caps).and_then(
+                    |(x, (addr, bytes))| {
+                        *stats
+                            .entry(addr)
+                            .and_modify(|(count, total_bytes)| {
+                                *count += 1;
+                                *total_bytes += bytes
+                            })
+                            .or_insert((1, bytes));
+                        if let Some((ethertype, dst, payload, len)) = x {
+                            // *stats.entry(Ipv4Address::new(8, 8, 8, 8)).or_insert(1) += 1;
+                            dispatch_ethernet(
+                                eth_addr,
+                                tx_token,
+                                Instant::from_millis(system_clock::ms() as i64),
+                                len,
+                                |mut frame| {
+                                    frame.set_dst_addr(dst);
+                                    // frame.set_src_addr(eth_addr);
+                                    frame.set_ethertype(ethertype);
+                                    frame.payload_mut().copy_from_slice(&payload);
+                                },
+                            )
+                        } else {
+                            // *stats.entry(Ipv4Address::new(8, 8, 4, 4)).or_insert(1) += 1;
+                            Ok(())
+                        }
+                    },
+                )
             })
             .or_else(|x| Err(x.to_string()))?;
     }
@@ -79,7 +90,7 @@ fn process_eth<'a, T: AsRef<[u8]>>(
 ) -> Result<
     (
         Option<(EthernetProtocol, EthernetAddress, Vec<u8>, usize)>,
-        Ipv4Address,
+        (Ipv4Address, usize),
     ),
     smoltcp::Error,
 > {
@@ -92,6 +103,8 @@ fn process_eth<'a, T: AsRef<[u8]>>(
     {
         return Err(smoltcp::Error::Dropped);
     }
+
+    let packet_len = eth_frame.payload().len() + EthernetFrame::<&T>::header_len();
 
     match eth_frame.ethertype() {
         EthernetProtocol::Ipv4 => {
@@ -117,10 +130,10 @@ fn process_eth<'a, T: AsRef<[u8]>>(
                         Vec::from(eth_frame.payload()),
                         eth_frame.payload().len(),
                     )),
-                    ipv4_repr.src_addr,
+                    (ipv4_repr.src_addr, packet_len),
                 ))
             } else {
-                Ok((None, ipv4_repr.src_addr))
+                Ok((None, (ipv4_repr.src_addr, packet_len)))
             }
         }
         EthernetProtocol::Arp => {
@@ -133,28 +146,29 @@ fn process_eth<'a, T: AsRef<[u8]>>(
                 source_protocol_addr,
                 target_protocol_addr,
                 ..
-            } = arp_repr {
+            } = arp_repr
+            {
                 if operation == ArpOperation::Request {
                     let arp = ArpRepr::EthernetIpv4 {
                         operation: ArpOperation::Reply,
                         source_hardware_addr: eth_addr,
                         source_protocol_addr: target_protocol_addr,
                         target_hardware_addr: source_hardware_addr,
-                        target_protocol_addr: source_protocol_addr
+                        target_protocol_addr: source_protocol_addr,
                     };
-                    let mut pack = ArpPacket::new_unchecked(vec!(0; arp.buffer_len()));
+                    let mut pack = ArpPacket::new_unchecked(vec![0; arp.buffer_len()]);
                     arp.emit(&mut pack);
                     Ok((
-                            Some((
-                                    EthernetProtocol::Arp,
-                                    source_hardware_addr,
-                                    pack.into_inner(),
-                                    arp.buffer_len(),
-                            )),
-                            source_protocol_addr
+                        Some((
+                            EthernetProtocol::Arp,
+                            source_hardware_addr,
+                            pack.into_inner(),
+                            arp.buffer_len(),
+                        )),
+                        (source_protocol_addr, packet_len),
                     ))
                 } else {
-                    Ok((None, source_protocol_addr))
+                    Ok((None, (source_protocol_addr, packet_len)))
                 }
             } else {
                 Err(::smoltcp::Error::Unrecognized)

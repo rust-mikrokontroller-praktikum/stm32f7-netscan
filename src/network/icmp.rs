@@ -1,4 +1,4 @@
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use alloc::vec::Vec;
 use byteorder::{ByteOrder, NetworkEndian};
 use smoltcp::iface::EthernetInterface;

@@ -456,7 +456,8 @@ fn main() -> ! {
                                 ) {
                                     Ok(neigh) => neigh,
                                     Err(x) => {
-                                        panic!("{}", x);
+                                        scroll_text.add_line(x.to_string());
+                                        neighbors
                                     }
                                 };
 

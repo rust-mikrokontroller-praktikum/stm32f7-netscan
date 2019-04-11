@@ -597,31 +597,38 @@ fn main() -> ! {
 
                             scroll_text.draw(&mut layer_1);
                         } else if item_ref == "ButtonKillGateway" {
-                            let button_kill_gateway: &mut FUiElement = element_map
-                                .get_mut(&String::from("ButtonKillGateway"))
-                                .unwrap();
+                            if gateway.is_some() {
+                                let button_kill_gateway: &mut FUiElement = element_map
+                                    .get_mut(&String::from("ButtonKillGateway"))
+                                    .unwrap();
 
-                            if !attack_gateway_v4_active {
-                                button_kill_gateway.set_background_color(Color {
-                                    red: 255,
-                                    green: 0,
-                                    blue: 0,
-                                    alpha: 255,
-                                });
+                                if !attack_gateway_v4_active {
+                                    button_kill_gateway.set_background_color(Color {
+                                        red: 255,
+                                        green: 0,
+                                        blue: 0,
+                                        alpha: 255,
+                                    });
 
-                                attack_gateway_v4_active = true;
+                                    attack_gateway_v4_active = true;
+                                } else {
+                                    button_kill_gateway.set_background_color(Color {
+                                        red: 255,
+                                        green: 255,
+                                        blue: 0,
+                                        alpha: 255,
+                                    });
+
+                                    attack_gateway_v4_active = false;
+                                }
+
+                                button_kill_gateway.draw(&mut layer_1);
                             } else {
-                                button_kill_gateway.set_background_color(Color {
-                                    red: 255,
-                                    green: 255,
-                                    blue: 0,
-                                    alpha: 255,
-                                });
-
-                                attack_gateway_v4_active = false;
+                                let scroll_text: &mut FUiElement =
+                                    element_map.get_mut(&String::from("ScrollText")).unwrap();
+                                scroll_text.add_line(String::from("No gateway to attack, try attacking neighbors instead"));
+                                scroll_text.draw(&mut layer_1);
                             }
-
-                            button_kill_gateway.draw(&mut layer_1);
                         } else if item_ref == "ButtonKillNetwork" {
                             let button_kill_network: &mut FUiElement = element_map
                                 .get_mut(&String::from("ButtonKillNetwork"))
@@ -805,11 +812,13 @@ fn main() -> ! {
                 network::arp::attack_gateway_v4_request(
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
+                    gateway.unwrap()
                 );
 
                 network::arp::attack_gateway_v4_reply(
                     &mut ethernet_interface.as_mut().unwrap(),
                     ETH_ADDR,
+                    gateway.unwrap()
                 );
             }
 

